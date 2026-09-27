@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TruthLens AI helps you verify claims, images, and public webpages.">
+  <title>TruthLens — AI Fact Checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="dark">
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1" aria-hidden="true"></div>
+  <div class="ambient-glow glow-2" aria-hidden="true"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a class="brand" href="#top">
+        <img src="sumit_logo.jpeg" alt="TruthLens logo" class="logo">
+        <span class="brand-name">TruthLens <b>AI</b></span>
+      </a>
+
+      <div class="engine-badge" id="engineStatusBadge" title="AI Verification Engine Active">
+        <span class="status-dot"></span>
+        <span class="status-text" id="engineStatusText">AI Engine Online</span>
+      </div>
+
+      <div class="nav-actions">
+        <button class="nav-icon-btn" id="themeBtn" type="button" aria-label="Toggle Theme" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <button class="nav-icon-btn settings-btn" id="openSettingsBtn" type="button" aria-label="Open Settings" title="Configure Engine & API Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main id="top" class="main-viewport">
+    
+    <!-- Hero / Verification Intake -->
+    <section class="verify-section" id="verifySection">
+      <!-- Mode Tabs -->
+      <div class="tabs-container">
+        <button class="mode-tab active" data-mode="all" type="button">Text claims</button>
+        <button class="mode-tab" data-mode="image" type="button">Images & screenshots</button>
+        <button class="mode-tab" data-mode="url" type="button">Public URLs</button>
+      </div>
+
+      <div class="intake-header">
+        <span class="eyebrow-tag">VERIFY A CLAIM</span>
+        <h1 class="intake-title">What would you like to check?</h1>
+        <p class="intake-desc">Paste a public article URL or describe the claim. Add an image when it provides useful context.</p>
+      </div>
+
+      <!-- Advanced Glass Input Card -->
+      <div class="input-glass-card" id="inputContainer">
+        <label class="sr-only" for="claimInput">Claim, image context, or website URL</label>
+        <textarea
+          id="claimInput"
+          rows="4"
+          maxlength="8000"
+          placeholder="Paste an article URL, news headline, or state a claim to fact-check…"
+        ></textarea>
+
+        <!-- Dynamic URL Tag Badge -->
+        <div id="urlBadge" class="detected-badge" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span>Public webpage detected</span>
+        </div>
+
+        <!-- Image Upload Preview Thumbnail -->
+        <div id="imagePreview" class="image-preview-dock" hidden>
+          <div class="preview-thumb-box">
+            <img id="previewImage" alt="Claim attachment preview">
+            <button id="removeImageBtn" type="button" aria-label="Remove image" title="Remove attachment">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <div class="preview-meta">
+            <span class="file-name" id="previewFileName">screenshot.png</span>
+            <span class="file-size" id="previewFileSize">2.4 MB</span>
+          </div>
+        </div>
+
+        <!-- Action Control Bar -->
+        <div class="input-controls">
+          <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          
+          <div class="char-count" id="charCount">0/8000</div>
+
+          <div class="control-actions">
+            <!-- Clear Button -->
+            <button class="tool-btn" id="clearBtn" type="button" aria-label="Clear input" title="Clear all input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+
+            <!-- Attach File Button -->
+            <button class="tool-btn" id="attachBtn" type="button" aria-label="Attach screenshot or photo" title="Attach screenshot or photo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            </button>
+
+            <!-- Voice Recognition Microphone Button -->
+            <button class="tool-btn mic-btn" id="micBtn" type="button" aria-label="Voice input" title="Voice input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </button>
+
+            <!-- Primary Execute Verification Button -->
+            <button class="submit-action-btn" id="verifyBtn" type="button" aria-label="Verify claim" title="Run AI Fact Check (Ctrl+Enter)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick sample claim pills for frictionless testing -->
+      <div class="quick-samples">
+        <span class="quick-label">Try an example:</span>
+        <button class="sample-chip" type="button">Pm of pakistan is Rahul Gandhi</button>
+        <button class="sample-chip" type="button">Sumit Purkait is PM of India</button>
+        <button class="sample-chip" type="button">Drinking raw milk cures lactose intolerance</button>
+      </div>
+    </section>
+
+    <!-- Cinematic Analyzing State (Matching Image 3) -->
+    <section class="loading-stage" id="loadingStage" hidden aria-live="assertive">
+      <div class="cinematic-portal">
+        <div class="pulsing-halo"></div>
+        <div class="orbital-ring"></div>
+        
+        <div class="status-pill-badge">
+          <span class="spinner-dot"></span>
+          <span class="status-label" id="loadingText">Analyzing claims...</span>
+        </div>
+
+        <div class="loading-substeps" id="loadingSteps">
+          <span class="step-line active">Parsing core factual assertions</span>
+          <span class="step-line">Querying verified news wires & databases</span>
+          <span class="step-line">Synthesizing consensus & confidence</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error State Container -->
+    <div id="errorDock" class="error-dock" hidden></div>
+
+    <!-- Fact-Check Results Presentation (Matching Images 2, 4, 1) -->
+    <section class="result-stage" id="resultStage" hidden aria-live="polite">
+      
+      <!-- Top Action Toolbar -->
+      <div class="result-header-bar">
+        <h2 class="result-title">Analysis Complete</h2>
+        
+        <div class="action-dock">
+          <!-- Copy Summary Button -->
+          <button class="action-pill-btn" id="copyResultBtn" type="button" title="Copy summary to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copyBtnLabel">Copy</span>
+          </button>
+
+          <!-- Export Layout Selector Dropdown -->
+          <div class="export-dropdown-wrapper">
+            <button class="action-pill-btn export-trigger-btn" id="exportMenuBtn" type="button" aria-haspopup="true" aria-expanded="false">
+              <span>Export</span>
+              <strong id="currentLayoutLabel">Grid</strong>
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            <div class="export-dropdown-menu" id="exportDropdownMenu" hidden>
+              <button class="export-option selected" data-layout="grid" type="button">
+                <span class="radio-indicator"></span>
+                <span>Grid</span>
+              </button>
+              <button class="export-option" data-layout="clean" type="button">
+                <span class="radio-indicator"></span>
+                <span>Clean</span>
+              </button>
+              <button class="export-option" data-layout="spotlight" type="button">
+                <span class="radio-indicator"></span>
+                <span>Spotlight</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Download Report Button -->
+          <button class="action-pill-btn icon-only" id="downloadBtn" type="button" title="Download Fact-Check PDF Report" aria-label="Download Report">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+
+          <!-- Share Button -->
+          <button class="action-pill-btn icon-only" id="shareBtn" type="button" title="Share result" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Notice / Warning if applicable -->
+      <div id="settingsNoticeBanner" class="settings-notice-banner" hidden>
+        <div class="notice-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span id="settingsNoticeText">Notice</span>
+        </div>
+        <button class="notice-action-btn" id="openSettingsNoticeBtn" type="button">Configure in Settings ⚙</button>
+      </div>
+
+      <!-- Claim Breakdown Accordion List -->
+      <div class="claim-breakdown-section">
+        <div class="breakdown-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          <span>Claim breakdown</span>
+        </div>
+        <div class="breakdown-items-list" id="breakdownList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Primary Dynamic Result Card (Changes based on Grid / Clean / Spotlight) -->
+      <div class="result-dynamic-container layout-grid" id="resultCardContainer">
+        <!-- Rendered by displayResult() -->
+      </div>
+
+      <!-- Reset & Verification Callout Actions -->
+      <div class="result-footer-dock">
+        <button class="new-check-gradient-btn" id="newCheckBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+          <span>New Check</span>
+        </button>
+        <p class="engine-branding-footnote">Powered by Google Gemini Engine • TruthLens AI</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Interactive Settings Modal / Drawer -->
+  <div class="settings-modal-overlay" id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="settings-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <div>
+            <h3 id="settingsModalTitle">Engine Settings</h3>
+            <p>Configure AI models, credentials, and verification parameters.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSettingsBtn" type="button" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- API Key Configuration Field -->
+        <div class="settings-group">
+          <div class="group-label-row">
+            <label for="settingApiKey">AI Provider API Key (Google Gemini API)</label>
+            <span class="key-status-tag" id="apiKeyStatusTag">Checking...</span>
+          </div>
+          <div class="input-with-button">
+            <input
+              type="password"
+              id="settingApiKey"
+              placeholder="AIzaSy... / AQ..."
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button class="input-addon-btn" id="toggleApiKeyVisibility" type="button" title="Toggle visibility">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+          <p class="field-hint">Your API key is used strictly for fact-check search and model inference. Stored locally.</p>
+        </div>
+
+        <!-- Model Selection -->
+        <div class="settings-group">
+          <label for="settingModel">AI Inference Model</label>
+          <select id="settingModel">
+            <option value="gemini-3.8-flash">Gemini 3.8 Flash (Ultra-Fast & Accurate) [Recommended]</option>
+            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (High Efficiency)</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (Next-Gen)</option>
+            <option value="gemini-flash-latest">Gemini Flash Latest</option>
+            <option value="gemini-pro-latest">Gemini Pro Latest</option>
+          </select>
+        </div>
+
+        <!-- Custom Base URL -->
+        <div class="settings-group">
+          <label for="settingBaseUrl">Custom API Base URL (Optional)</label>
+          <input
+            type="text"
+            id="settingBaseUrl"
+            placeholder="https://generativelanguage.googleapis.com/v1beta (or Custom Proxy)"
+            autocomplete="off"
+          >
+          <p class="field-hint">Leave blank to use the official provider endpoint automatically.</p>
+        </div>
+
+        <!-- Verification Search Depth -->
+        <div class="settings-group">
+          <label>Verification Strictness & Depth</label>
+          <div class="segmented-control">
+            <button type="button" class="segment-btn" data-depth="fast">Fast</button>
+            <button type="button" class="segment-btn active" data-depth="balanced">Balanced</button>
+            <button type="button" class="segment-btn" data-depth="deep">Deep Research</button>
+          </div>
+        </div>
+
+        <!-- Connection Test Result Output Box -->
+        <div id="testConnectionStatus" class="test-feedback-box" hidden></div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="secondary-btn" id="testSettingsBtn" type="button">
+          <span class="btn-spinner" hidden></span>
+          <span>Test Connection</span>
+        </button>
+        <button class="primary-btn" id="saveSettingsBtn" type="button">
+          <span>Save Changes</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Dock -->
+  <div class="toast-dock" id="toastDock" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
