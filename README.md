@@ -42,7 +42,7 @@ https://truthlens-ai-psi.vercel.app/
 
 ## 📸 Project Preview
 
-Add screenshots of the application here.
+![TruthLens AI Preview](./Screenshot%202026-09-30%20094749.png)
 
 ## 👨‍💻 Developer
 
