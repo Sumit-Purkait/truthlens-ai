@@ -38,7 +38,9 @@ const dom = {
   // Loading Stage
   loadingStage: $("loadingStage"),
   loadingText: $("loadingText"),
+  loadingSubtext: $("loadingSubtext"),
   loadingSteps: $("loadingSteps"),
+  pipelineProgressFill: $("pipelineProgressFill"),
 
   // Results Stage
   resultStage: $("resultStage"),
@@ -503,28 +505,118 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
-// Loading Stage Animation Ticker
+// Cinematic 5-Stage Verification Progress Pipeline
 let stepInterval = null;
+const ANALYSIS_STAGES = [
+  {
+    title: "Analyzing the claim",
+    subtitle: "Breaking the claim into verifiable facts...",
+    progress: 20
+  },
+  {
+    title: "Cross-checking sources",
+    subtitle: "Searching for supporting and conflicting evidence...",
+    progress: 40
+  },
+  {
+    title: "Evaluating evidence",
+    subtitle: "Comparing information across sources...",
+    progress: 65
+  },
+  {
+    title: "Verifying credibility",
+    subtitle: "Evaluating source credibility...",
+    progress: 85
+  },
+  {
+    title: "Finalizing result",
+    subtitle: "Preparing the final fact-check...",
+    progress: 96
+  }
+];
+
 function startLoadingAnimation(isUrl) {
+  dom.loadingStage.classList.remove("fade-out");
   dom.loadingStage.hidden = false;
   dom.resultStage.hidden = true;
   dom.errorDock.hidden = true;
   dom.verifyBtn.disabled = true;
 
-  dom.loadingText.textContent = isUrl ? "Retrieving webpage & verifying..." : "Analyzing claims...";
+  const firstStage = isUrl
+    ? {
+        title: "Analyzing the webpage claim",
+        subtitle: "Extracting webpage text & core claims...",
+        progress: 20
+      }
+    : ANALYSIS_STAGES[0];
+
+  if (dom.loadingText) dom.loadingText.textContent = firstStage.title;
+  if (dom.loadingSubtext) dom.loadingSubtext.textContent = firstStage.subtitle;
+  if (dom.pipelineProgressFill) dom.pipelineProgressFill.style.width = `${firstStage.progress}%`;
+
   const steps = dom.loadingSteps.querySelectorAll(".step-line");
   let activeStep = 0;
-  steps.forEach((s, idx) => s.classList.toggle("active", idx === 0));
+  steps.forEach((s, idx) => {
+    s.classList.toggle("active", idx === 0);
+    s.classList.remove("completed");
+  });
+
+  setTimeout(() => {
+    dom.loadingStage.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 100);
 
   if (stepInterval) clearInterval(stepInterval);
   stepInterval = setInterval(() => {
-    activeStep = (activeStep + 1) % steps.length;
-    steps.forEach((s, idx) => s.classList.toggle("active", idx === activeStep));
-  }, 1800);
+    if (activeStep < ANALYSIS_STAGES.length - 1) {
+      activeStep++;
+      steps.forEach((s, idx) => {
+        s.classList.toggle("active", idx === activeStep);
+        s.classList.toggle("completed", idx < activeStep);
+      });
+      const stage = ANALYSIS_STAGES[activeStep];
+      if (dom.loadingText) dom.loadingText.textContent = stage.title;
+      if (dom.loadingSubtext) {
+        dom.loadingSubtext.style.opacity = "0";
+        setTimeout(() => {
+          dom.loadingSubtext.textContent = stage.subtitle;
+          dom.loadingSubtext.style.opacity = "1";
+        }, 150);
+      }
+      if (dom.pipelineProgressFill) {
+        dom.pipelineProgressFill.style.width = `${stage.progress}%`;
+      }
+    }
+  }, 1600);
+}
+
+async function completeLoadingAnimation() {
+  if (stepInterval) {
+    clearInterval(stepInterval);
+    stepInterval = null;
+  }
+  const steps = dom.loadingSteps.querySelectorAll(".step-line");
+  steps.forEach(s => {
+    s.classList.remove("active");
+    s.classList.add("completed");
+  });
+  if (dom.pipelineProgressFill) {
+    dom.pipelineProgressFill.style.width = "100%";
+  }
+  if (dom.loadingText) {
+    dom.loadingText.textContent = "Finalizing result";
+  }
+  if (dom.loadingSubtext) {
+    dom.loadingSubtext.textContent = "Analysis complete. Generating report...";
+  }
+  dom.loadingStage.classList.add("fade-out");
+  await new Promise(r => setTimeout(r, 280));
+  dom.loadingStage.hidden = true;
+  dom.loadingStage.classList.remove("fade-out");
 }
 
 function stopLoadingAnimation() {
   dom.loadingStage.hidden = true;
+  dom.loadingStage.classList.remove("fade-out");
   dom.verifyBtn.disabled = false;
   dom.verifyBtn.removeAttribute("aria-busy");
   if (stepInterval) {
@@ -590,8 +682,10 @@ async function checkClaim() {
     }
 
     appState.currentResult = data;
+    await completeLoadingAnimation();
     renderResults(data);
   } catch (error) {
+    stopLoadingAnimation();
     displayError(error, error.status || 0);
   } finally {
     appState.isVerifying = false;
@@ -636,7 +730,7 @@ function displayError(err, status = 0) {
     description = rawMsg || "Please select a standard PNG, JPEG, WebP, or GIF image under 10 MB.";
   } else if (lower.includes("failed to fetch") || lower.includes("networkerror")) {
     title = "Backend Connection Failed";
-    description = `Could not communicate with the TruthLens backend server at ${API_BASE}. Please verify the backend is running on port 5000.`;
+    description = `Could not communicate with the FACTSIFT AI backend server at ${API_BASE}. Please verify the backend is running on port 5000.`;
   }
 
   dom.errorDock.innerHTML = `
@@ -741,11 +835,15 @@ function renderLayoutCard(data, layout) {
     return `
     <a class="source-anchor-card" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${title} on ${domainText} (opens in a new tab)">
       <div class="source-card-info">
-        <span class="source-type-tag">${type}</span>
+        <div class="source-top-meta">
+          <span class="source-type-tag">${type}</span>
+          <span class="source-domain-text">${domainText}</span>
+        </div>
         <strong class="source-title-text">${title}</strong>
-        <span class="source-domain-text">${domainText}</span>
       </div>
-      <svg class="source-external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      <div class="source-icon-wrap">
+        <svg class="source-external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </div>
     </a>
   `;
   }).join("") : `<p class="field-hint">${isFallback ? "No external background references were found for this offline check." : "No external web links were referenced for this check."}</p>`;
@@ -761,20 +859,22 @@ function renderLayoutCard(data, layout) {
             ${secondaryPill}
             ${modeBadge}
           </div>
-          <span class="field-hint" style="font-size: 0.8rem; margin-top: 5px; display: block;">Engine: <strong>${esc(data.engine || "TruthLens AI Engine")}</strong></span>
+          <span class="field-hint" style="font-size: 0.8rem; margin-top: 6px; display: block;">Engine: <strong>${esc(data.engine || "FACTSIFT AI Engine")}</strong></span>
         </div>
 
-        <div class="confidence-metric-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-          <span>Confidence: <strong>${confidence}%</strong></span>
-          <div class="confidence-bar-track">
+        <div class="confidence-gauge-card">
+          <div class="confidence-info-row">
+            <span class="confidence-label-tag">CONFIDENCE</span>
+            <span class="confidence-numeric-val">${confidence}%</span>
+          </div>
+          <div class="confidence-bar-track" role="progressbar" aria-valuenow="${confidence}" aria-valuemin="0" aria-valuemax="100">
             <div class="confidence-bar-fill" style="width: ${confidence}%;"></div>
           </div>
         </div>
       </div>
 
       <div class="analysis-columns">
-        <div class="section-box">
+        <div class="section-box analysis-box">
           <div class="section-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             <span>ANALYSIS</span>
@@ -782,7 +882,7 @@ function renderLayoutCard(data, layout) {
           <p class="section-text">${esc(data.explanation || data.analysis || "Analysis complete.")}</p>
         </div>
 
-        <div class="section-box">
+        <div class="section-box evidence-box">
           <div class="section-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             <span>KEY EVIDENCE</span>
@@ -793,8 +893,11 @@ function renderLayoutCard(data, layout) {
 
       <div class="sources-card-block">
         <div class="sources-header-row">
-          <span class="section-label">${isFallback ? "BACKGROUND REFERENCES" : "REFERENCED SOURCES"} (${sources.length})</span>
-          <span class="field-hint">${isFallback ? "Offline knowledge records • Live search paused" : "Consulted web sources • Live verification"}</span>
+          <div class="sources-title-group">
+            <span class="section-label">${isFallback ? "BACKGROUND REFERENCES" : "REFERENCED SOURCES"}</span>
+            <span class="sources-count-badge">${sources.length}</span>
+          </div>
+          <span class="field-hint">${isFallback ? "Offline knowledge records" : "Live web grounded verification"}</span>
         </div>
         <div class="sources-grid">
           ${sourcesHtml}
@@ -837,7 +940,7 @@ dom.copyResultBtn.addEventListener("click", async () => {
   if (!appState.currentResult) return;
   const d = appState.currentResult;
   const modeText = d.verificationMode === "knowledge_fallback" ? "Offline Knowledge Fallback" : "Live Web Grounded";
-  const textSummary = `[TRUTHLENS FACT CHECK]\nClaim: ${d.claim}\nVerdict: ${d.verdict} (${d.confidence}% Confidence)\nMode: ${modeText}\nEngine: ${d.engine || "TruthLens AI"}\n\nAnalysis:\n${d.explanation}\n\nEvidence:\n${d.evidence}\n\nGenerated with TruthLens AI.`;
+  const textSummary = `[FACTSIFT FACT CHECK]\nClaim: ${d.claim}\nVerdict: ${d.verdict} (${d.confidence}% Confidence)\nMode: ${modeText}\nEngine: ${d.engine || "FACTSIFT AI"}\n\nAnalysis:\n${d.explanation}\n\nEvidence:\n${d.evidence}\n\nGenerated with FACTSIFT AI.`;
 
   try {
     await navigator.clipboard.writeText(textSummary);
@@ -865,7 +968,7 @@ dom.downloadBtn.addEventListener("click", () => {
   const reportElement = dom.resultCardContainer.cloneNode(true);
   const opt = {
     margin: 12,
-    filename: `TruthLens-Fact-Check-${Date.now()}.pdf`,
+    filename: `FACTSIFT-Fact-Check-${Date.now()}.pdf`,
     image: { type: "jpeg", quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
@@ -885,7 +988,7 @@ dom.shareBtn.addEventListener("click", async () => {
   if (navigator.share) {
     try {
       await navigator.share({
-        title: `TruthLens Fact Check: ${d.claim}`,
+        title: `FACTSIFT Fact Check: ${d.claim}`,
         text: `Verdict: ${d.verdict} (${d.confidence}%) — ${d.explanation}`,
         url: window.location.href
       });

@@ -3,25 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TruthLens AI helps you verify claims, images, and public webpages.">
-  <title>TruthLens — AI Fact Checker</title>
+  <title>FACTSIFT AI — AI-Powered Fact Checking</title>
+  <meta name="description" content="FACTSIFT AI is an AI-powered fact-checking tool that verifies claims, images, and public webpages using evidence and live web sources.">
+  <link rel="canonical" href="https://factsift.app/" />
+
+  <!-- Favicon & Touch Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="icon" type="image/png" href="factsift-logo.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://factsift.app/">
+  <meta property="og:title" content="FACTSIFT AI — AI-Powered Fact Checking">
+  <meta property="og:description" content="FACTSIFT AI is an AI-powered fact-checking tool that verifies claims, images, and public webpages using evidence and live web sources.">
+  <meta property="og:image" content="https://factsift.app/factsift-logo.png">
+  <meta property="og:site_name" content="FACTSIFT AI">
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:url" content="https://factsift.app/">
+  <meta name="twitter:title" content="FACTSIFT AI — AI-Powered Fact Checking">
+  <meta name="twitter:description" content="FACTSIFT AI is an AI-powered fact-checking tool that verifies claims, images, and public webpages using evidence and live web sources.">
+  <meta name="twitter:image" content="https://factsift.app/factsift-logo.png">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "FACTSIFT AI",
+    "url": "https://factsift.app/",
+    "description": "FACTSIFT AI is an AI-powered fact-checking tool that verifies claims, images, and public webpages using evidence and live web sources."
+  }
+  </script>
+
+  <!-- Web Fonts & Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="dark">
   <!-- Ambient background glow elements -->
-  <div class="ambient-glow glow-1" aria-hidden="true"></div>
-  <div class="ambient-glow glow-2" aria-hidden="true"></div>
+  <div class="ambient-glow-wrapper" aria-hidden="true">
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+  </div>
 
   <!-- Navigation Bar -->
   <header class="navbar">
     <div class="nav-container">
-      <a class="brand" href="#top">
-        <img src="sumit_logo.jpeg" alt="TruthLens logo" class="logo">
-        <span class="brand-name">TruthLens <b>AI</b></span>
+      <a class="brand" href="#top" aria-label="FACTSIFT AI Home">
+        <div class="logo-box">
+          <img src="factsift-logo.png" alt="FACTSIFT AI logo" class="logo">
+        </div>
+        <span class="brand-name">FACTSIFT <b class="brand-badge">AI</b></span>
       </a>
 
       <div class="engine-badge" id="engineStatusBadge" title="AI Verification Engine Active">
@@ -48,16 +87,28 @@
     <!-- Hero / Verification Intake -->
     <section class="verify-section" id="verifySection">
       <!-- Mode Tabs -->
-      <div class="tabs-container">
-        <button class="mode-tab active" data-mode="all" type="button">Text claims</button>
-        <button class="mode-tab" data-mode="image" type="button">Images & screenshots</button>
-        <button class="mode-tab" data-mode="url" type="button">Public URLs</button>
+      <div class="tabs-container" role="tablist" aria-label="Verification modes">
+        <button class="mode-tab active" data-mode="all" type="button" role="tab" aria-selected="true">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>Text claims</span>
+        </button>
+        <button class="mode-tab" data-mode="image" type="button" role="tab" aria-selected="false">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span>Images & screenshots</span>
+        </button>
+        <button class="mode-tab" data-mode="url" type="button" role="tab" aria-selected="false">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span>Public URLs</span>
+        </button>
       </div>
 
-      <div class="intake-header">
-        <span class="eyebrow-tag">VERIFY A CLAIM</span>
-        <h1 class="intake-title">What would you like to check?</h1>
-        <p class="intake-desc">Paste a public article URL or describe the claim. Add an image when it provides useful context.</p>
+      <div class="hero-header intake-header">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          <span class="hero-badge-text">AI-POWERED FACT CHECKING</span>
+        </div>
+        <h1 class="hero-title intake-title">Sift the facts. <span class="gradient-text">Find the truth.</span></h1>
+        <p class="hero-desc intake-desc">Verify claims, images, and public webpages with AI-powered evidence analysis.</p>
       </div>
 
       <!-- Advanced Glass Input Card -->
@@ -129,22 +180,107 @@
       </div>
     </section>
 
-    <!-- Cinematic Analyzing State (Matching Image 3) -->
+    <!-- Cinematic Fact-Check Analyzing State -->
     <section class="loading-stage" id="loadingStage" hidden aria-live="assertive">
-      <div class="cinematic-portal">
-        <div class="pulsing-halo"></div>
-        <div class="orbital-ring"></div>
+      <div class="analysis-panel-card">
         
-        <div class="status-pill-badge">
-          <span class="spinner-dot"></span>
-          <span class="status-label" id="loadingText">Analyzing claims...</span>
+        <!-- Central Animated Verification Visual (Glowing Core, Orbital Rings, Scanning Line, Micro-Particles) -->
+        <div class="analysis-core-visual" aria-hidden="true">
+          <div class="ambient-analysis-glow"></div>
+          
+          <!-- Outer orbital rotating ring with satellite particles -->
+          <div class="orbital-ring ring-outer">
+            <span class="orbital-dot dot-1"></span>
+            <span class="orbital-dot dot-2"></span>
+          </div>
+
+          <!-- Middle counter-rotating ring with radar hash markers -->
+          <div class="orbital-ring ring-middle">
+            <span class="orbital-dot dot-3"></span>
+          </div>
+
+          <!-- Thin scanning / evidence radar line -->
+          <div class="scanner-sweep-line"></div>
+
+          <!-- Inner glowing violet core orb with pulsing halos -->
+          <div class="core-orb-wrapper">
+            <div class="core-orb-pulse"></div>
+            <div class="core-orb">
+              <svg class="core-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+          </div>
         </div>
 
-        <div class="loading-substeps" id="loadingSteps">
-          <span class="step-line active">Parsing core factual assertions</span>
-          <span class="step-line">Querying verified news wires & databases</span>
-          <span class="step-line">Synthesizing consensus & confidence</span>
+        <!-- Dynamic Active Stage Headline & Changing Supporting Message -->
+        <div class="analysis-header-block">
+          <div class="active-stage-badge">
+            <span class="pulse-beacon"></span>
+            <span class="active-stage-title" id="loadingText">Analyzing the claim</span>
+          </div>
+          <p class="active-stage-subtitle" id="loadingSubtext">Breaking the claim into verifiable facts...</p>
         </div>
+
+        <!-- 5-Stage Step Progress Pipeline -->
+        <div class="analysis-stages-pipeline" id="loadingSteps">
+          <div class="stage-step-item step-line active" data-step="0">
+            <div class="stage-step-indicator">
+              <span class="step-num">1</span>
+              <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stage-step-info">
+              <span class="stage-step-title">Analyzing the claim</span>
+            </div>
+          </div>
+
+          <div class="stage-step-item step-line" data-step="1">
+            <div class="stage-step-indicator">
+              <span class="step-num">2</span>
+              <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stage-step-info">
+              <span class="stage-step-title">Cross-checking sources</span>
+            </div>
+          </div>
+
+          <div class="stage-step-item step-line" data-step="2">
+            <div class="stage-step-indicator">
+              <span class="step-num">3</span>
+              <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stage-step-info">
+              <span class="stage-step-title">Evaluating evidence</span>
+            </div>
+          </div>
+
+          <div class="stage-step-item step-line" data-step="3">
+            <div class="stage-step-indicator">
+              <span class="step-num">4</span>
+              <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stage-step-info">
+              <span class="stage-step-title">Verifying credibility</span>
+            </div>
+          </div>
+
+          <div class="stage-step-item step-line" data-step="4">
+            <div class="stage-step-indicator">
+              <span class="step-num">5</span>
+              <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="stage-step-info">
+              <span class="stage-step-title">Finalizing result</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subtle Continuous Progress Line -->
+        <div class="pipeline-progress-track">
+          <div class="pipeline-progress-fill" id="pipelineProgressFill"></div>
+        </div>
+
       </div>
     </section>
 
@@ -167,36 +303,39 @@
 
           <!-- Export Layout Selector Dropdown -->
           <div class="export-dropdown-wrapper">
-            <button class="action-pill-btn export-trigger-btn" id="exportMenuBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <button class="action-pill-btn export-trigger-btn" id="exportMenuBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Export Fact-Check View">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span>Export</span>
-              <strong id="currentLayoutLabel">Grid</strong>
+              <span id="currentLayoutLabel" class="sr-only">Grid</span>
               <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
 
             <div class="export-dropdown-menu" id="exportDropdownMenu" hidden>
               <button class="export-option selected" data-layout="grid" type="button">
                 <span class="radio-indicator"></span>
-                <span>Grid</span>
+                <span>Standard Grid</span>
               </button>
               <button class="export-option" data-layout="clean" type="button">
                 <span class="radio-indicator"></span>
-                <span>Clean</span>
+                <span>Clean View</span>
               </button>
               <button class="export-option" data-layout="spotlight" type="button">
                 <span class="radio-indicator"></span>
-                <span>Spotlight</span>
+                <span>Spotlight View</span>
               </button>
             </div>
           </div>
 
           <!-- Download Report Button -->
-          <button class="action-pill-btn icon-only" id="downloadBtn" type="button" title="Download Fact-Check PDF Report" aria-label="Download Report">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <button class="action-pill-btn" id="downloadBtn" type="button" title="Download Fact-Check PDF Report" aria-label="Download Report">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>Download</span>
           </button>
 
           <!-- Share Button -->
-          <button class="action-pill-btn icon-only" id="shareBtn" type="button" title="Share result" aria-label="Share">
+          <button class="action-pill-btn" id="shareBtn" type="button" title="Share result" aria-label="Share">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <span>Share</span>
           </button>
         </div>
       </div>
@@ -232,7 +371,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
           <span>New Check</span>
         </button>
-        <p class="engine-branding-footnote">Powered by Google Gemini Engine • TruthLens AI</p>
+        <p class="engine-branding-footnote">Powered by Google Gemini Engine • FACTSIFT AI</p>
       </div>
 
     </section>
