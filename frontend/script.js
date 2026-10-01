@@ -1,9 +1,10 @@
 // ==========================================================================
-// VERITY AI FACT-CHECKER — CLIENT-SIDE CONTROLLER & ENGINE INTERFACE
+// FACTSIFT AI FACT-CHECKER — CLIENT-SIDE CONTROLLER & ENGINE INTERFACE
 // ==========================================================================
 
 // Dynamic API Endpoint (supports same-origin deployments, custom host override, or local dev port 5000)
-const API_BASE = window.TRUTHLENS_API_URL ||
+const API_BASE = window.FACTSIFT_API_URL ||
+  window.TRUTHLENS_API_URL ||
   window.VERITY_API_URL ||
   (window.location.protocol.startsWith("http") && !["5500", "5173", "3000", "8000", "8080"].includes(window.location.port)
     ? window.location.origin

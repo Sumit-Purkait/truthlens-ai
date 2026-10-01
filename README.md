@@ -1,4 +1,4 @@
-# TruthLens AI 🔍
+# FACTSIFT AI 🔍
 
 AI-powered fact-checking web application that verifies text claims, images, and public URLs using Google Gemini and live web grounding.
 
@@ -34,7 +34,7 @@ https://truthlens-ai-psi.vercel.app/
 ## 🔄 How It Works
 
 1. User submits a claim, image, or public URL.
-2. TruthLens AI processes the input.
+2. FACTSIFT AI processes the input.
 3. Relevant web information is collected.
 4. Google Gemini analyzes the evidence.
 5. The system generates a fact-checking verdict.
@@ -42,7 +42,7 @@ https://truthlens-ai-psi.vercel.app/
 
 ## 📸 Project Preview
 
-![TruthLens AI Preview](./Screenshot%202026-09-30%20094749.png)
+![FACTSIFT AI Preview](./Screenshot%202026-09-30%20094749.png)
 
 ## 👨‍💻 Developer
 
