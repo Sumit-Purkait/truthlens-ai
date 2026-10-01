@@ -42,7 +42,7 @@ https://truthlens-ai-psi.vercel.app/
 
 ## 📸 Project Preview
 
-![FACTSIFT AI Preview](./Screenshot%202026-09-30%20094749.png)
+![FACTSIFT AI Preview](./factsift-preview.png)
 
 ## 👨‍💻 Developer
 
