@@ -138,32 +138,61 @@ async function callGeminiGenerateContent({ apiKey, model, systemPrompt, userProm
   }
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRetryableGeminiError(err) {
+  if (!err) return false;
+  if (err.status === 503 || err.status === 429) return true;
+  if (err.geminiError?.status === "UNAVAILABLE" || err.geminiError?.status === "RESOURCE_EXHAUSTED") return true;
+  const msg = (err.message || "").toLowerCase();
+  return msg.includes("high demand") || msg.includes("overloaded") || msg.includes("spikes in demand") || msg.includes("rate limit") || msg.includes("quota");
+}
+
 async function callGeminiWithFallback({ apiKey, primaryModel, systemPrompt, userPrompt, image, baseUrl, timeoutMs = GEMINI_TIMEOUT_MS }) {
   const modelsToTry = [primaryModel];
   for (const fb of FALLBACK_MODELS) {
     if (!modelsToTry.includes(fb)) modelsToTry.push(fb);
   }
 
+  const RETRY_DELAYS_MS = [1000, 2000];
+  const MAX_RETRIES = 2;
+  let retriesUsed = 0;
   let lastError = null;
+
   for (const currentModel of modelsToTry) {
-    try {
-      const result = await callGeminiGenerateContent({
-        apiKey,
-        model: currentModel,
-        systemPrompt,
-        userPrompt,
-        image,
-        baseUrl,
-        timeoutMs
-      });
-      return result;
-    } catch (err) {
-      lastError = err;
-      // Fail immediately only for authentication/permission issues (invalid key)
-      if (err.status === 401 || err.geminiError?.status === "PERMISSION_DENIED") {
-        throw err;
+    while (true) {
+      try {
+        const result = await callGeminiGenerateContent({
+          apiKey,
+          model: currentModel,
+          systemPrompt,
+          userPrompt,
+          image,
+          baseUrl,
+          timeoutMs
+        });
+        return result;
+      } catch (err) {
+        lastError = err;
+
+        // Fail immediately only for authentication/permission issues (invalid key)
+        if (err.status === 401 || err.geminiError?.status === "PERMISSION_DENIED") {
+          throw err;
+        }
+
+        // Exponential backoff retry for temporary HTTP 503 high demand or 429 rate limit (max 2 retries per request)
+        if (retriesUsed < MAX_RETRIES && isRetryableGeminiError(err)) {
+          const delayMs = RETRY_DELAYS_MS[retriesUsed] || 2000;
+          retriesUsed++;
+          console.warn(`[Gemini Retry] Model ${currentModel} returned HTTP ${err.status || err.message}. Retrying attempt ${retriesUsed}/${MAX_RETRIES} in ${delayMs}ms...`);
+          await sleep(delayMs);
+          continue;
+        }
+
+        // When retries are exhausted or error is not retryable, move to next model in fallback chain
+        console.warn(`[Gemini Fallback] Model ${currentModel} returned ${err.status || err.message}. Retrying with next model in chain...`);
+        break;
       }
-      console.warn(`[Gemini Fallback] Model ${currentModel} returned ${err.status || err.message}. Retrying with next model in chain...`);
     }
   }
   throw lastError;
