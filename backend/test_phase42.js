@@ -22,7 +22,7 @@ const FORBIDDEN_WORDS = [
 ];
 
 async function runTests() {
-  console.log("=== STARTING TRUTHLENS PHASE 4.2 VERIFICATION TESTS ===\n");
+  console.log("=== STARTING FACTSIFT AI PHASE 4.2 VERIFICATION TESTS ===\n");
   let allPassed = true;
   
   for (const { type, claim } of claims) {

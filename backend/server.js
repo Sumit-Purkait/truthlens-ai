@@ -408,7 +408,7 @@ async function fetchPage(value) {
       response = await fetch(url, {
         redirect: "manual",
         signal: controller.signal,
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 VerityAI/2.0", Accept: "text/html,application/xhtml+xml" }
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 FACTSIFT-AI/2.0", Accept: "text/html,application/xhtml+xml" }
       });
     } catch (error) {
       throw error.name === "AbortError" ? fail("The webpage took too long to respond (timeout).", 504) : fail("The webpage could not be accessed.", 422);
@@ -769,7 +769,7 @@ async function searchWikipedia(query) {
     const url = 'https://en.wikipedia.org/w/api.php?action=opensearch&search=' + encodeURIComponent(query) + '&limit=4&namespace=0&format=json';
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'TruthLensFactChecker/2.0' }
+      headers: { 'User-Agent': 'FACTSIFT-AI-FactChecker/2.0' }
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -802,7 +802,7 @@ async function searchWikipediaText(query) {
     const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&srlimit=4`;
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'TruthLensFactChecker/2.0' }
+      headers: { 'User-Agent': 'FACTSIFT-AI-FactChecker/2.0' }
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -888,7 +888,7 @@ async function fetchAuthoritativeSources(claim, page) {
   return candidates;
 }
 
-// Intelligent TruthLens Fact-Checking Engine (Google Gemini + Dynamic Live Sources)
+// Intelligent FACTSIFT AI Fact-Checking Engine (Google Gemini + Dynamic Live Sources)
 async function performVerification({ claim, cleanUrl, page, image, userKey, userModel, userBaseUrl }) {
   const activeKey = (userKey || settingsState.apiKey || "").trim();
   const activeModel = normalizeModel(userModel || settingsState.model);
@@ -903,7 +903,7 @@ async function performVerification({ claim, cleanUrl, page, image, userKey, user
       claim,
       page,
       reason: "Google Gemini API quota balance is exhausted (429).",
-      warning: "Live AI verification is temporarily unavailable due to API rate limits (429). TruthLens evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
+      warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
       candidates
     });
   }
@@ -922,7 +922,7 @@ async function performVerification({ claim, cleanUrl, page, image, userKey, user
     `[Source ${idx + 1}] Title: ${c.title}\nPublisher: ${c.publisher}\nDomain: ${c.domain}\nType: ${c.type}\nURL: ${c.url}\nExcerpt: ${c.snippet}`
   ).join('\n\n');
 
-  const prompt = `You are TruthLens AI, an elite objective, evidence-based fact-checking engine designed to produce authoritative factual verification.
+  const prompt = `You are FACTSIFT AI, an elite objective, evidence-based fact-checking engine designed to produce authoritative factual verification.
 CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear})
 
 TEMPORAL CONTEXT & TIME-SENSITIVE REASONING:
@@ -967,7 +967,7 @@ SELECTED_SOURCES: [comma-separated numbers from the list above, e.g. 1, 2, 4 or 
 
   if (activeKey) {
     try {
-      const systemInstruction = `You are TruthLens AI, an elite factual verification system dedicated to neutrality, accuracy, primary evidence, and temporal precision.
+      const systemInstruction = `You are FACTSIFT AI, an elite factual verification system dedicated to neutrality, accuracy, primary evidence, and temporal precision.
 CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear}).
 TEMPORAL REASONING RULES:
 1. Evaluate all claims as of today: ${currentDateStr}.
@@ -1085,7 +1085,7 @@ TEMPORAL REASONING RULES:
           claim,
           page,
           reason: "Google Gemini API quota balance is exhausted (429).",
-          warning: "Live AI verification is temporarily unavailable due to API rate limits (429). TruthLens evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
+          warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
           candidates
         });
       }
@@ -1108,17 +1108,17 @@ TEMPORAL REASONING RULES:
     }
   }
 
-  // If no API key configured, use TruthLens dynamic verification
+  // If no API key configured, use FACTSIFT AI dynamic verification
   return synthesizeVerityFactCheck({
     claim,
     page,
     reason: "No API Key configured on server.",
-    warning: "Running in TruthLens Offline Knowledge mode. Add your Gemini API key in Settings (⚙) for real-time live web verification.",
+    warning: "Running in FACTSIFT AI Offline Knowledge mode. Add your Gemini API key in Settings (⚙) for real-time live web verification.",
     candidates
   });
 }
 
-// Built-in TruthLens fact verification synthesis for high availability & stability
+// Built-in FACTSIFT AI fact verification synthesis for high availability & stability
 function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = [] }) {
   let verdict = "UNCERTAIN";
   let confidence = 70;
@@ -1130,7 +1130,7 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
   if (page) {
     verdict = "UNCERTAIN";
     confidence = 65;
-    explanation = `[Knowledge Fallback — Live AI Verification Temporarily Unavailable]: TruthLens reviewed the content extracted from ${page.domain}. The article discusses '${page.title}'. Statements in online articles are evaluated alongside independent background references.`;
+    explanation = `[Knowledge Fallback — Live AI Verification Temporarily Unavailable]: FACTSIFT AI reviewed the content extracted from ${page.domain}. The article discusses '${page.title}'. Statements in online articles are evaluated alongside independent background references.`;
     evidence = `Reachable webpage at ${page.domain}. Extracted ${page.text.length} characters of readable context.`;
     const pageDomain = (page.domain || "").toLowerCase().replace(/^www\./, "");
     seenDomains.add(pageDomain);
@@ -1179,7 +1179,7 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
     explanation,
     evidence,
     sources,
-    engine: "TruthLens Offline Knowledge Base (Fallback Analysis)",
+    engine: "FACTSIFT AI Offline Knowledge Base (Fallback Analysis)",
     verificationMode: "knowledge_fallback",
     warning: warning || "Live verification is temporarily unavailable. Displaying offline knowledge analysis."
   };
@@ -1189,7 +1189,7 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
 // ROUTES
 // -------------------------------------------------------------
 
-// Serve frontend static assets (TruthLens AI UI)
+// Serve frontend static assets (FACTSIFT AI UI)
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Root & Health
@@ -1199,7 +1199,7 @@ app.get("/", (req, res) => {
   }
   res.json({
     status: "ok",
-    app: "TruthLens AI Fact Checker Engine",
+    app: "FACTSIFT AI Fact Checker Engine",
     version: "2.0.0",
     hasApiKey: !!settingsState.apiKey,
     activeModel: settingsState.model
@@ -1378,7 +1378,7 @@ app.post("/api/check", checkLimiter, async (req, res, next) => {
         urlExtractionError: true,
         verdict: "UNCERTAIN",
         confidence: 0,
-        explanation: "TruthLens could not extract sufficient readable article text from this webpage.",
+        explanation: "FACTSIFT AI could not extract sufficient readable article text from this webpage.",
         evidence: "The page may require a subscription, run heavy client-side scripts, or block automated readers. Try copying the claim text directly.",
         sources: [{ title: page.title, url: page.url, domain: page.domain, type: "Submitted Page" }],
         breakdown: [{ id: 1, text: page.title, verdict: "UNCERTAIN" }]
@@ -1451,7 +1451,7 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`\n=================================================`);
-  console.log(`  TruthLens AI Fact-Checker API Server Active`);
+  console.log(`  FACTSIFT AI Fact-Checker API Server Active`);
   console.log(`  Listening on: http://localhost:${PORT}`);
   console.log(`  Settings & Health: http://localhost:${PORT}/api/settings`);
   console.log(`=================================================\n`);

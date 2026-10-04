@@ -88,10 +88,10 @@ let appState = {
   isVerifying: false,
   recognition: null,
   settings: {
-    apiKey: localStorage.getItem("truthlens_api_key") || localStorage.getItem("verity_api_key") || "",
-    model: localStorage.getItem("truthlens_model") || localStorage.getItem("verity_model") || "gemini-3.8-flash",
-    baseUrl: localStorage.getItem("truthlens_base_url") || localStorage.getItem("verity_base_url") || "",
-    searchDepth: localStorage.getItem("truthlens_search_depth") || localStorage.getItem("verity_search_depth") || "balanced"
+    apiKey: localStorage.getItem("factsift_api_key") || localStorage.getItem("truthlens_api_key") || localStorage.getItem("verity_api_key") || "",
+    model: localStorage.getItem("factsift_model") || localStorage.getItem("truthlens_model") || localStorage.getItem("verity_model") || "gemini-3.8-flash",
+    baseUrl: localStorage.getItem("factsift_base_url") || localStorage.getItem("truthlens_base_url") || localStorage.getItem("verity_base_url") || "",
+    searchDepth: localStorage.getItem("factsift_search_depth") || localStorage.getItem("truthlens_search_depth") || localStorage.getItem("verity_search_depth") || "balanced"
   }
 };
 
@@ -133,9 +133,10 @@ function applyTheme(theme) {
   const isLight = theme === "light";
   document.body.classList.toggle("light", isLight);
   document.body.classList.toggle("dark", !isLight);
+  localStorage.setItem("factsift_theme", theme);
   localStorage.setItem("truthlens_theme", theme);
 }
-applyTheme(localStorage.getItem("truthlens_theme") || localStorage.getItem("verity_theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+applyTheme(localStorage.getItem("factsift_theme") || localStorage.getItem("truthlens_theme") || localStorage.getItem("verity_theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
 dom.themeBtn.addEventListener("click", () => {
   const isLight = document.body.classList.contains("light");
   applyTheme(isLight ? "dark" : "light");
@@ -160,7 +161,7 @@ async function initEngineSettings() {
       } else {
         dom.apiKeyStatusTag.textContent = "No Key Set";
       }
-      if (data.model && !localStorage.getItem("truthlens_model") && !localStorage.getItem("verity_model")) {
+      if (data.model && !localStorage.getItem("factsift_model") && !localStorage.getItem("truthlens_model") && !localStorage.getItem("verity_model")) {
         dom.settingModel.value = data.model;
         appState.settings.model = data.model;
       }
@@ -285,11 +286,15 @@ dom.saveSettingsBtn.addEventListener("click", async (e) => {
   appState.settings.model = dom.settingModel.value;
   appState.settings.baseUrl = dom.settingBaseUrl.value.trim();
 
+  localStorage.setItem("factsift_api_key", appState.settings.apiKey);
+  localStorage.setItem("factsift_model", appState.settings.model);
+  localStorage.setItem("factsift_base_url", appState.settings.baseUrl);
+  localStorage.setItem("factsift_search_depth", appState.settings.searchDepth);
+  // Also keep legacy keys for compatibility
   localStorage.setItem("truthlens_api_key", appState.settings.apiKey);
   localStorage.setItem("truthlens_model", appState.settings.model);
   localStorage.setItem("truthlens_base_url", appState.settings.baseUrl);
   localStorage.setItem("truthlens_search_depth", appState.settings.searchDepth);
-  // Also keep legacy keys for compatibility
   localStorage.setItem("verity_api_key", appState.settings.apiKey);
   localStorage.setItem("verity_model", appState.settings.model);
 

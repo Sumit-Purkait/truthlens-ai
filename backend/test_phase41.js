@@ -15,7 +15,7 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 async function runTests() {
-  console.log("=== STARTING TRUTHLENS PHASE 4.1 VERIFICATION TESTS ===\n");
+  console.log("=== STARTING FACTSIFT AI PHASE 4.1 VERIFICATION TESTS ===\n");
   
   for (const { type, claim } of claims) {
     console.log(`--------------------------------------------------`);
