@@ -26,7 +26,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // Google Gemini API Configuration & Endpoints
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_TIMEOUT_MS = 25_000;
-const FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-3-flash-preview"];
+const FALLBACK_MODELS = ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
 
 function isGeminiKey(key) {
   if (!key || typeof key !== "string") return false;
@@ -154,8 +154,8 @@ async function callGeminiWithFallback({ apiKey, primaryModel, systemPrompt, user
     if (!modelsToTry.includes(fb)) modelsToTry.push(fb);
   }
 
-  const RETRY_DELAYS_MS = [1000, 2000];
-  const MAX_RETRIES = 2;
+  const RETRY_DELAYS_MS = [1000];
+  const MAX_RETRIES = 1;
   let retriesUsed = 0;
   let lastError = null;
 
@@ -595,6 +595,10 @@ function getClaimTokens(text) {
     tokenSet.add("minister");
     tokenSet.add("pmo");
   }
+  if (tokenSet.has("cm")) {
+    tokenSet.add("chief");
+    tokenSet.add("minister");
+  }
   if (tokenSet.has("jwst")) {
     tokenSet.add("james");
     tokenSet.add("webb");
@@ -823,19 +827,26 @@ async function fetchAuthoritativeSources(claim, page) {
   const cleanClaim = (claim || (page ? page.title : "")).trim();
   if (!cleanClaim) return [];
 
-  const expandedClaim = cleanClaim.replace(/\bpm\b/gi, 'Prime Minister');
+  const currentYear = new Date().getFullYear();
+  const expandedClaim = cleanClaim
+    .replace(/\bpm\b/gi, 'Prime Minister')
+    .replace(/\bcm\b/gi, 'Chief Minister');
   const words = expandedClaim.split(/\s+/);
   const coreQuery = words.slice(0, 14).join(' ');
 
   const searchPromises = [searchDuckDuckGo(coreQuery)];
 
   // Targeted authority expansion based on topic category
-  if (/(?:prime minister|pm|president|minister|chief minister|governor|court|law|election|parliament|govt|government)/i.test(expandedClaim)) {
+  const isOfficeholderOrGov = /(?:prime minister|\bpm\b|president|minister|chief minister|\bcm\b|governor|court|law|election|parliament|govt|government)/i.test(expandedClaim) || /(?:prime minister|\bpm\b|president|minister|chief minister|\bcm\b|governor|court|law|election|parliament|govt|government)/i.test(cleanClaim);
+
+  if (isOfficeholderOrGov) {
     const entityMatch = expandedClaim.match(/(?:prime minister|president|chief minister|governor)\s+(?:of\s+)?([a-z\s]+)/i);
     const target = entityMatch ? entityMatch[0].trim() : 'official government';
+    searchPromises.push(searchDuckDuckGo(`current ${target} ${currentYear}`));
     searchPromises.push(searchDuckDuckGo(`${target} official website`));
+    searchPromises.push(searchDuckDuckGo(`${coreQuery} ${currentYear}`));
     searchPromises.push(searchWikipedia(target));
-    searchPromises.push(searchWikipediaText(target));
+    searchPromises.push(searchWikipediaText(`current ${target} ${currentYear}`));
   } else if (/(?:nasa|space|jwst|telescope|planet|exoplanet|trappist|mars|moon|galaxy|astronomy)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} NASA official`));
     const scienceMatch = expandedClaim.match(/(?:trappist-[0-9a-z]+|jwst|james webb|mars|moon|voyager)/i);
@@ -897,13 +908,31 @@ async function performVerification({ claim, cleanUrl, page, image, userKey, user
     });
   }
 
+  const now = new Date();
+  const currentDateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  const currentYear = now.getFullYear();
+
   // Build live search grounding context for the AI
   const searchContext = candidates.slice(0, 10).map((c, idx) =>
     `[Source ${idx + 1}] Title: ${c.title}\nPublisher: ${c.publisher}\nDomain: ${c.domain}\nType: ${c.type}\nURL: ${c.url}\nExcerpt: ${c.snippet}`
   ).join('\n\n');
 
   const prompt = `You are TruthLens AI, an elite objective, evidence-based fact-checking engine designed to produce authoritative factual verification.
-Analyse the submitted claim, context, and/or webpage using verified empirical facts and the LIVE WEB SEARCH FINDINGS below.
+CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear})
+
+TEMPORAL CONTEXT & TIME-SENSITIVE REASONING:
+- Statements about designated officeholders (such as Chief Ministers, Prime Ministers, Presidents, Governors, Cabinet Ministers), election outcomes, legislation, and organizational leaders change over time.
+- Always verify present-tense claims relative to the CURRENT DATE (${currentDateStr}).
+- If pre-trained knowledge from prior years contradicts recent live search findings regarding who currently holds an office, ALWAYS prioritize the up-to-date live search evidence (e.g. recent elections, oaths of office, cabinet formations).
+- Never assume a past officeholder is still in power if live search findings show a new officeholder has assumed office.
+- For time-sensitive claims regarding current officeholders or recent events, never output 100% confidence if reliable current evidence is missing or conflicting. Calibrate confidence strictly according to the recency and credibility of the evidence.
+
+Analyse the submitted claim, context, and/or webpage using verified empirical facts, current temporal context, and the LIVE WEB SEARCH FINDINGS below.
 
 CLAIM TO VERIFY:
 ${claim || (page ? `Article: ${page.title}` : "Visual image claim verification")}
@@ -916,10 +945,12 @@ ${searchContext || "No live external search results available."}
 INSTRUCTIONS:
 1. Determine the VERDICT: TRUE, FALSE, MISLEADING, or UNCERTAIN.
 2. Provide CONFIDENCE: 0-100%.
-3. In EXPLANATION: A concise, highly balanced analytical breakdown explaining why the claim is true, false, misleading, or unproven.
+   - Do not return 100% confidence for current officeholder claims when reliable current evidence is missing or conflicting.
+3. In EXPLANATION: A concise, highly balanced analytical breakdown explaining why the claim is true, false, misleading, or unproven relative to today's date (${currentDateStr}).
    - For political or government-related claims, remain strictly factual, neutral, and impartial. Do not introduce political opinions. Do not rank politicians, parties, candidates, or political choices.
-   - When official government sources establish the factual status (such as constitutional roles, official records, or designated officeholders), rely strictly on verified official records.
-4. In EVIDENCE: The concrete facts, timelines, or official statements that prove or disprove the statement.
+   - When official government sources or recent reputable news sources document an election, swearing-in, or change of office, rely strictly on the verified current facts.
+   - If pre-trained knowledge contradicts recent live web findings about who currently holds office, ALWAYS prioritize the up-to-date live search findings.
+4. In EVIDENCE: The concrete facts, dates, timelines, and official swearing-in/election statements that prove or disprove the statement.
 5. In SELECTED_SOURCES: Select up to 5 source numbers (e.g. 1, 3) from the LIVE WEB SEARCH FINDINGS above that directly support, contradict, or provide necessary context for the claim.
    - Prioritize directly relevant OFFICIAL GOVERNMENT SOURCES and PRIMARY SOURCES.
    - Use REPUTABLE NEWS SOURCES and PUBLIC REFERENCES when helpful for secondary context.
@@ -936,7 +967,13 @@ SELECTED_SOURCES: [comma-separated numbers from the list above, e.g. 1, 2, 4 or 
 
   if (activeKey) {
     try {
-      const systemInstruction = "You are TruthLens AI, an elite factual verification system dedicated to neutrality, accuracy, and primary evidence.";
+      const systemInstruction = `You are TruthLens AI, an elite factual verification system dedicated to neutrality, accuracy, primary evidence, and temporal precision.
+CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear}).
+TEMPORAL REASONING RULES:
+1. Evaluate all claims as of today: ${currentDateStr}.
+2. Political positions and constitutional officeholders (Chief Ministers, Prime Ministers, Governors, Presidents) change over time.
+3. Prioritize recent, verified live web evidence over older pre-trained model knowledge.
+4. If reliable current evidence for an officeholder claim is missing or conflicting, do not output 100% confidence.`;
 
       const geminiResult = await callGeminiWithFallback({
         apiKey: activeKey,
@@ -1011,6 +1048,23 @@ SELECTED_SOURCES: [comma-separated numbers from the list above, e.g. 1, 2, 4 or 
 
       // Limit to maximum 5 sources
       finalSources = finalSources.slice(0, 5);
+
+      // Calibrate confidence for current officeholder claims when reliable current evidence is missing or conflicting
+      const isOfficeholderClaim = /(?:chief minister|\bcm\b|prime minister|\bpm\b|president|governor|minister of)\b/i.test(claim || "");
+      if (isOfficeholderClaim) {
+        if (candidates.length === 0 && parsed.confidence >= 80) {
+          // Reliable current evidence is missing entirely
+          parsed.confidence = 70;
+        } else if (parsed.verdict === "UNCERTAIN" && parsed.confidence > 60) {
+          parsed.confidence = 50;
+        } else if (parsed.confidence === 100) {
+          const hasOfficialGov = finalSources.some(s => s.type === "Official Government Source" || s.type === "Primary Source");
+          if (!hasOfficialGov) {
+            // Highly credible consensus across news/reference sources, calibrated down from absolute 100%
+            parsed.confidence = 95;
+          }
+        }
+      }
 
       return {
         analysis: analysisText,
