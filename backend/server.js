@@ -25,8 +25,8 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 // Google Gemini API Configuration & Endpoints
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const GEMINI_TIMEOUT_MS = 25_000;
-const FALLBACK_MODELS = ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
+const GEMINI_TIMEOUT_MS = 15_000;
+const FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.7-flash", "gemini-3-flash-preview"];
 
 function isGeminiKey(key) {
   if (!key || typeof key !== "string") return false;
@@ -180,16 +180,16 @@ async function callGeminiWithFallback({ apiKey, primaryModel, systemPrompt, user
           throw err;
         }
 
-        // Exponential backoff retry for temporary HTTP 503 high demand or 429 rate limit (max 2 retries per request)
-        if (retriesUsed < MAX_RETRIES && isRetryableGeminiError(err)) {
-          const delayMs = RETRY_DELAYS_MS[retriesUsed] || 2000;
+        // Exponential backoff retry for temporary HTTP 429 rate limit (max 1 retry)
+        if (retriesUsed < MAX_RETRIES && (err.status === 429 || err.geminiError?.status === "RESOURCE_EXHAUSTED")) {
+          const delayMs = RETRY_DELAYS_MS[retriesUsed] || 1500;
           retriesUsed++;
-          console.warn(`[Gemini Retry] Model ${currentModel} returned HTTP ${err.status || err.message}. Retrying attempt ${retriesUsed}/${MAX_RETRIES} in ${delayMs}ms...`);
+          console.warn(`[Gemini Retry] Model ${currentModel} returned 429 rate limit. Retrying attempt ${retriesUsed}/${MAX_RETRIES} in ${delayMs}ms...`);
           await sleep(delayMs);
           continue;
         }
 
-        // When retries are exhausted or error is not retryable, move to next model in fallback chain
+        // For 503 high demand or exhausted retries, move immediately to next model in fallback chain
         console.warn(`[Gemini Fallback] Model ${currentModel} returned ${err.status || err.message}. Retrying with next model in chain...`);
         break;
       }
@@ -515,7 +515,19 @@ const KNOWN_PUBLISHERS = {
   'altnews.in': { publisher: 'Alt News', type: 'Public Reference', isPrimary: false },
   'boomlive.in': { publisher: 'BOOM Live', type: 'Public Reference', isPrimary: false },
   'en.wikipedia.org': { publisher: 'Wikipedia', type: 'Public Reference', isPrimary: false },
-  'britannica.com': { publisher: 'Encyclopaedia Britannica', type: 'Public Reference', isPrimary: false }
+  'britannica.com': { publisher: 'Encyclopaedia Britannica', type: 'Public Reference', isPrimary: false },
+
+  // Official International Sports & Global Governing Bodies
+  'fia.com': { publisher: "FIA (Fédération Internationale de l'Automobile)", type: 'Primary Source', isPrimary: true },
+  'formula1.com': { publisher: 'Formula 1 (Official)', type: 'Primary Source', isPrimary: true },
+  'fifa.com': { publisher: 'FIFA (Official)', type: 'Primary Source', isPrimary: true },
+  'olympics.com': { publisher: 'International Olympic Committee (IOC)', type: 'Primary Source', isPrimary: true },
+  'icc-cricket.com': { publisher: 'International Cricket Council (ICC)', type: 'Primary Source', isPrimary: true },
+  'wto.org': { publisher: 'World Trade Organization (WTO)', type: 'Primary Source', isPrimary: true },
+  'imf.org': { publisher: 'International Monetary Fund (IMF)', type: 'Primary Source', isPrimary: true },
+  'interpol.int': { publisher: 'INTERPOL', type: 'Primary Source', isPrimary: true },
+  'wada-ama.org': { publisher: 'World Anti-Doping Agency (WADA)', type: 'Primary Source', isPrimary: true },
+  'oecd.org': { publisher: 'OECD', type: 'Primary Source', isPrimary: true }
 };
 
 const ALLOWED_SOURCE_TYPES = new Set([
@@ -561,6 +573,9 @@ function classifyDomain(domain) {
   }
   if (/\.gov(\.[a-z]{2})?$/i.test(d) || /\.nic\.in$/i.test(d)) {
     return { domain: d, publisher: 'Government Official Website', type: 'Official Government Source', isPrimary: true };
+  }
+  if (/\.int$/i.test(d)) {
+    return { domain: d, publisher: 'International Official Organization', type: 'Primary Source', isPrimary: true };
   }
   if (/\.edu(\.[a-z]{2})?$/i.test(d) || /\.ac\.[a-z]{2}$/i.test(d)) {
     return { domain: d, publisher: 'Academic Institution', type: 'Primary Source', isPrimary: true };
@@ -823,18 +838,31 @@ async function searchWikipediaText(query) {
   }
 }
 
-async function fetchAuthoritativeSources(claim, page) {
+async function fetchAuthoritativeSources(claim, page, customQueries = []) {
   const cleanClaim = (claim || (page ? page.title : "")).trim();
-  if (!cleanClaim) return [];
+  if (!cleanClaim && (!customQueries || customQueries.length === 0)) return [];
 
   const currentYear = new Date().getFullYear();
   const expandedClaim = cleanClaim
     .replace(/\bpm\b/gi, 'Prime Minister')
     .replace(/\bcm\b/gi, 'Chief Minister');
-  const words = expandedClaim.split(/\s+/);
+  const words = expandedClaim.split(/\s+/).filter(Boolean);
   const coreQuery = words.slice(0, 14).join(' ');
 
-  const searchPromises = [searchDuckDuckGo(coreQuery)];
+  const searchPromises = [];
+  if (coreQuery) {
+    searchPromises.push(searchDuckDuckGo(coreQuery));
+  }
+
+  // Execute custom queries provided (e.g. from image OCR / claim extraction)
+  if (Array.isArray(customQueries) && customQueries.length > 0) {
+    for (const q of customQueries.slice(0, 4)) {
+      const cleanQ = (q || '').trim();
+      if (cleanQ && cleanQ.length > 3 && cleanQ.toLowerCase() !== coreQuery.toLowerCase()) {
+        searchPromises.push(searchDuckDuckGo(cleanQ));
+      }
+    }
+  }
 
   // Targeted authority expansion based on topic category
   const isOfficeholderOrGov = /(?:prime minister|\bpm\b|president|minister|chief minister|\bcm\b|governor|court|law|election|parliament|govt|government)/i.test(expandedClaim) || /(?:prime minister|\bpm\b|president|minister|chief minister|\bcm\b|governor|court|law|election|parliament|govt|government)/i.test(cleanClaim);
@@ -856,6 +884,15 @@ async function fetchAuthoritativeSources(claim, page) {
     }
   } else if (/(?:who|cdc|disease|vaccine|virus|health|fda|medical)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} WHO CDC official health`));
+  } else if (/(?:fia|f1|formula\s*1|grand\s*prix|fifa|olympic|world\s*cup|tournament|championship|reschedul|relocat|venue|calendar|schedule)/i.test(expandedClaim)) {
+    searchPromises.push(searchDuckDuckGo(`${coreQuery} official announcement`));
+    searchPromises.push(searchDuckDuckGo(`${coreQuery} ${currentYear}`));
+    searchPromises.push(searchDuckDuckGo(`${coreQuery} confirmed`));
+  }
+
+  // Generic announcement/statement expansion
+  if (coreQuery && /(?:statement|announc|official|confirm|held in|moved to|postpon|cancel|reschedul)/i.test(expandedClaim)) {
+    searchPromises.push(searchDuckDuckGo(`${coreQuery} official statement`));
   }
 
   // Include encyclopedic reference for historical / definition context
@@ -888,19 +925,99 @@ async function fetchAuthoritativeSources(claim, page) {
   return candidates;
 }
 
+// OCR & Claim Identification Module for Visual/Document Claims
+async function extractImageClaimAndQueries({ image, userClaim, apiKey, model, baseUrl }) {
+  if (!image || !apiKey) {
+    return { transcription: "", claim: userClaim || "", queries: [] };
+  }
+
+  const prompt = `You are an expert OCR, document inspection, and factual claim analysis system.
+Analyze the provided image carefully.
+
+Tasks:
+1. Extract and transcribe all relevant visible text, document titles, logos, organization names, dates, locations, and statements shown in the image.
+2. Identify the core factual statement, announcement, or claim being made (especially noting specific dates, years, locations, organizers, rescheduled/relocated events, or exceptional decisions).
+3. If user added contextual text ("${userClaim || ""}"), factor it in.
+4. Generate 2 to 3 concise, highly effective live web search queries to verify whether this claim or statement is authentic, officially confirmed, reported by reputable media, or debunked. Include relevant years, locations, and official organization names.
+
+Respond in EXACTLY this format:
+TRANSCRIPTION: [verbatim or summarized text from image]
+CORE_CLAIM: [clear 1-2 sentence statement of the factual claim made in the image]
+SEARCH_QUERIES: [query 1 | query 2 | query 3]`;
+
+  try {
+    const result = await callGeminiWithFallback({
+      apiKey,
+      primaryModel: model,
+      systemPrompt: "You are an accurate OCR transcription and factual claim identification module for fact-checking images.",
+      userPrompt: prompt,
+      image,
+      baseUrl,
+      timeoutMs: 12_000
+    });
+
+    const text = result.text || "";
+    const transcriptionMatch = text.match(/TRANSCRIPTION:\s*([\s\S]*?)(?=\n(?:CORE_CLAIM|SEARCH_QUERIES):|$)/i);
+    const claimMatch = text.match(/CORE_CLAIM:\s*([\s\S]*?)(?=\nSEARCH_QUERIES:|$)/i);
+    const queriesMatch = text.match(/SEARCH_QUERIES:\s*([^\n]+)/i);
+
+    const transcription = transcriptionMatch ? transcriptionMatch[1].trim() : "";
+    const extractedClaim = claimMatch ? claimMatch[1].trim() : "";
+    const queriesStr = queriesMatch ? queriesMatch[1].trim() : "";
+    const queries = queriesStr ? queriesStr.split("|").map(q => q.trim()).filter(q => q.length > 3) : [];
+
+    return {
+      transcription,
+      claim: extractedClaim || userClaim || transcription,
+      queries
+    };
+  } catch (err) {
+    console.warn("[Image OCR/Extraction Notice]", err.message);
+    return {
+      transcription: "",
+      claim: userClaim || "",
+      queries: []
+    };
+  }
+}
+
 // Intelligent FACTSIFT AI Fact-Checking Engine (Google Gemini + Dynamic Live Sources)
 async function performVerification({ claim, cleanUrl, page, image, userKey, userModel, userBaseUrl }) {
   const activeKey = (userKey || settingsState.apiKey || "").trim();
   const activeModel = normalizeModel(userModel || settingsState.model);
   const activeBaseUrl = (userBaseUrl || settingsState.baseUrl || "").trim();
 
-  // Fetch real, non-fabricated candidate sources via live search
-  const candidates = await fetchAuthoritativeSources(claim, page);
+  let effectiveClaim = (claim || (page ? page.title : "")).trim();
+  let imageExtractedText = "";
+  let imageSearchQueries = [];
+
+  // 1. When an image is provided, extract its text, factual claims, and search queries first
+  if (image && activeKey) {
+    try {
+      const extracted = await extractImageClaimAndQueries({
+        image,
+        userClaim: claim,
+        apiKey: activeKey,
+        model: activeModel,
+        baseUrl: activeBaseUrl
+      });
+      imageExtractedText = extracted.transcription || "";
+      if (extracted.claim && (!claim || claim.trim().length === 0)) {
+        effectiveClaim = extracted.claim;
+      }
+      imageSearchQueries = extracted.queries || [];
+    } catch (extractErr) {
+      console.warn("[Image Extraction Error]", extractErr.message);
+    }
+  }
+
+  // 2. Fetch real, non-fabricated candidate sources via live search
+  const candidates = await fetchAuthoritativeSources(effectiveClaim, page, imageSearchQueries);
 
   // If the quota was recently found exhausted and user hasn't provided a custom key, use synthesis directly
   if (!userKey && Date.now() < quotaExhaustedUntil) {
     return synthesizeVerityFactCheck({
-      claim,
+      claim: effectiveClaim,
       page,
       reason: "Google Gemini API quota balance is exhausted (429).",
       warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
@@ -925,18 +1042,26 @@ async function performVerification({ claim, cleanUrl, page, image, userKey, user
   const prompt = `You are FACTSIFT AI, an elite objective, evidence-based fact-checking engine designed to produce authoritative factual verification.
 CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear})
 
-TEMPORAL CONTEXT & TIME-SENSITIVE REASONING:
-- Statements about designated officeholders (such as Chief Ministers, Prime Ministers, Presidents, Governors, Cabinet Ministers), election outcomes, legislation, and organizational leaders change over time.
-- Always verify present-tense claims relative to the CURRENT DATE (${currentDateStr}).
-- If pre-trained knowledge from prior years contradicts recent live search findings regarding who currently holds an office, ALWAYS prioritize the up-to-date live search evidence (e.g. recent elections, oaths of office, cabinet formations).
-- Never assume a past officeholder is still in power if live search findings show a new officeholder has assumed office.
-- For time-sensitive claims regarding current officeholders or recent events, never output 100% confidence if reliable current evidence is missing or conflicting. Calibrate confidence strictly according to the recency and credibility of the evidence.
+LIVE EVIDENCE & TEMPORAL REASONING PRINCIPLES:
+- For current, scheduled, rescheduled, relocated, or time-sensitive events, ALWAYS prioritize fresh live web evidence over pre-trained general knowledge or assumptions.
+- Do NOT reject or mark a claim FALSE simply because it conflicts with common sense, traditional knowledge, or historical precedent (such as an event traditionally held in one country being relocated or hosted in another country, unexpected calendar changes, or unprecedented decisions). Events change, venues relocate, and exceptions happen.
+- When live web evidence contradicts your initial assumption or pre-trained knowledge, LIVE EVIDENCE MUST TAKE ABSOLUTE PRIORITY.
+- Prefer authoritative primary sources:
+  * Official government websites (.gov, official portals)
+  * Official organizations and governing bodies (e.g. sports federations like FIA/Formula 1, FIFA, IOC; science bodies like NASA, ESA; international bodies like UN, WHO, WTO)
+  * Verified official statements, press releases, and reputable news wires
+- If multiple credible sources conflict or report contradictory facts, explicitly describe the conflict in EXPLANATION instead of guessing, and assign MISLEADING or UNCERTAIN.
+- Calibrate confidence carefully:
+  * Do NOT automatically assign 100% confidence to image-based claims or time-sensitive claims unless authoritative primary sources conclusively and unequivocally confirm the exact statement.
+  * If evidence is partial, indirect, or based on secondary reports without official confirmation, calibrate confidence appropriately (e.g. 70-85%).
+  * If reliable live sources are absent or inconclusive, assign UNCERTAIN with lower confidence.
 
 Analyse the submitted claim, context, and/or webpage using verified empirical facts, current temporal context, and the LIVE WEB SEARCH FINDINGS below.
 
 CLAIM TO VERIFY:
-${claim || (page ? `Article: ${page.title}` : "Visual image claim verification")}
+${effectiveClaim || (page ? `Article: ${page.title}` : "Visual image statement verification")}
 
+${imageExtractedText ? `EXTRACTED IMAGE CONTENT / OCR:\n${imageExtractedText}\n` : ""}
 ${page ? `WEBSITE CONTEXT:\nURL: ${page.url}\nDomain: ${page.domain}\nReadable Excerpt:\n${page.text.slice(0, 8000)}` : ""}
 
 LIVE WEB SEARCH FINDINGS:
@@ -945,12 +1070,12 @@ ${searchContext || "No live external search results available."}
 INSTRUCTIONS:
 1. Determine the VERDICT: TRUE, FALSE, MISLEADING, or UNCERTAIN.
 2. Provide CONFIDENCE: 0-100%.
-   - Do not return 100% confidence for current officeholder claims when reliable current evidence is missing or conflicting.
+   - Do not return 100% confidence for unconfirmed or ambiguous claims without definitive primary source proof.
 3. In EXPLANATION: A concise, highly balanced analytical breakdown explaining why the claim is true, false, misleading, or unproven relative to today's date (${currentDateStr}).
    - For political or government-related claims, remain strictly factual, neutral, and impartial. Do not introduce political opinions. Do not rank politicians, parties, candidates, or political choices.
-   - When official government sources or recent reputable news sources document an election, swearing-in, or change of office, rely strictly on the verified current facts.
-   - If pre-trained knowledge contradicts recent live web findings about who currently holds office, ALWAYS prioritize the up-to-date live search findings.
-4. In EVIDENCE: The concrete facts, dates, timelines, and official swearing-in/election statements that prove or disprove the statement.
+   - When official sources, governing bodies, or reputable news document an exceptional event, relocation, or change, rely strictly on verified current facts.
+   - If pre-trained knowledge contradicts recent live web findings, ALWAYS prioritize the up-to-date live search findings.
+4. In EVIDENCE: The concrete facts, dates, timelines, and official statements that prove or disprove the statement.
 5. In SELECTED_SOURCES: Select up to 5 source numbers (e.g. 1, 3) from the LIVE WEB SEARCH FINDINGS above that directly support, contradict, or provide necessary context for the claim.
    - Prioritize directly relevant OFFICIAL GOVERNMENT SOURCES and PRIMARY SOURCES.
    - Use REPUTABLE NEWS SOURCES and PUBLIC REFERENCES when helpful for secondary context.
@@ -969,11 +1094,13 @@ SELECTED_SOURCES: [comma-separated numbers from the list above, e.g. 1, 2, 4 or 
     try {
       const systemInstruction = `You are FACTSIFT AI, an elite factual verification system dedicated to neutrality, accuracy, primary evidence, and temporal precision.
 CURRENT SYSTEM DATE: ${currentDateStr} (Year: ${currentYear}).
-TEMPORAL REASONING RULES:
+CORE VERIFICATION RULES:
 1. Evaluate all claims as of today: ${currentDateStr}.
-2. Political positions and constitutional officeholders (Chief Ministers, Prime Ministers, Governors, Presidents) change over time.
-3. Prioritize recent, verified live web evidence over older pre-trained model knowledge.
-4. If reliable current evidence for an officeholder claim is missing or conflicting, do not output 100% confidence.`;
+2. Prioritize fresh, verified live web evidence over older pre-trained model knowledge.
+3. Do NOT reject claims simply because they conflict with historical norms or general knowledge (e.g. rescheduled, relocated, or exceptional events).
+4. Prefer authoritative primary sources (official government portals, official organizations like FIA/Formula 1, FIFA, IOC, NASA/ESA, WHO).
+5. If live search results conflict or if reliable current evidence is missing, do not guess with high confidence; explain the uncertainty.
+6. Calibrate confidence carefully: do not assign 100% confidence to image claims unless definitive primary sources prove it.`;
 
       const geminiResult = await callGeminiWithFallback({
         apiKey: activeKey,
@@ -1030,7 +1157,7 @@ TEMPORAL REASONING RULES:
       // If AI didn't select any sources, select only genuinely relevant candidates (NO artificial padding!)
       if (finalSources.length === (page ? 1 : 0) && candidates.length > 0) {
         const maxSlots = 5 - finalSources.length;
-        const ranked = filterAndRankCandidates(candidates, claim, maxSlots);
+        const ranked = filterAndRankCandidates(candidates, effectiveClaim, maxSlots);
         for (const c of ranked) {
           const d = (c.domain || "").toLowerCase().replace(/^www\./, "");
           if (!seenDomains.has(d) && !finalSources.some(s => s.url === c.url)) {
@@ -1050,23 +1177,49 @@ TEMPORAL REASONING RULES:
       finalSources = finalSources.slice(0, 5);
 
       // Calibrate confidence for current officeholder claims when reliable current evidence is missing or conflicting
-      const isOfficeholderClaim = /(?:chief minister|\bcm\b|prime minister|\bpm\b|president|governor|minister of)\b/i.test(claim || "");
+      const isOfficeholderClaim = /(?:chief minister|\bcm\b|prime minister|\bpm\b|president|governor|minister of)\b/i.test(effectiveClaim || "");
       if (isOfficeholderClaim) {
         if (candidates.length === 0 && parsed.confidence >= 80) {
-          // Reliable current evidence is missing entirely
           parsed.confidence = 70;
         } else if (parsed.verdict === "UNCERTAIN" && parsed.confidence > 60) {
           parsed.confidence = 50;
         } else if (parsed.confidence === 100) {
-          const hasOfficialGov = finalSources.some(s => s.type === "Official Government Source" || s.type === "Primary Source");
+          const hasOfficialGov = finalSources.some(s => s.type === "Official Government Source" || s.type === "Primary Source" || s.isPrimary);
           if (!hasOfficialGov) {
-            // Highly credible consensus across news/reference sources, calibrated down from absolute 100%
             parsed.confidence = 95;
           }
         }
       }
 
+      // Calibrate confidence for image claims: do not give 100% unless definitive primary source is present
+      if (image && parsed.confidence === 100) {
+        const hasAuthoritativeSource = finalSources.some(s => s.type === "Official Government Source" || s.type === "Primary Source" || s.isPrimary);
+        if (!hasAuthoritativeSource) {
+          parsed.confidence = 90;
+        }
+      }
+
+      // Requirement 7 & 8: Check whether genuine live web sources were retrieved
+      const hasLiveSources = finalSources.length > 0;
+
+      if (!hasLiveSources) {
+        if (parsed.evidence && /corroborated by live web|verified via live search|live web search confirmed/i.test(parsed.evidence)) {
+          parsed.evidence = "No external web sources could be retrieved to substantiate this claim. Evaluated using model internal knowledge.";
+        }
+        return {
+          claim: effectiveClaim,
+          analysis: analysisText,
+          ...parsed,
+          sources: [],
+          engine: "Google Gemini Engine • Offline Model Knowledge (Live Sources Unavailable)",
+          modelUsed: geminiResult.modelUsed || activeModel,
+          verificationMode: "knowledge_fallback",
+          warning: "Live web verification was unavailable or insufficient: no live web sources could be retrieved for this claim. This assessment relies on pre-trained model knowledge and may not reflect recent or rescheduled events."
+        };
+      }
+
       return {
+        claim: effectiveClaim,
         analysis: analysisText,
         ...parsed,
         sources: finalSources,
@@ -1082,7 +1235,7 @@ TEMPORAL REASONING RULES:
           quotaExhaustedUntil = Date.now() + 15 * 1000;
         }
         return synthesizeVerityFactCheck({
-          claim,
+          claim: effectiveClaim,
           page,
           reason: "Google Gemini API quota balance is exhausted (429).",
           warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
@@ -1091,7 +1244,7 @@ TEMPORAL REASONING RULES:
       }
       if (apiError.status === 401 || (apiError.status === 400 && apiError.message.includes("API key not valid"))) {
         return synthesizeVerityFactCheck({
-          claim,
+          claim: effectiveClaim,
           page,
           reason: "Google Gemini API authentication failed.",
           warning: "The Gemini API key was rejected by Google. Please update your API key in Settings (⚙).",
@@ -1099,7 +1252,7 @@ TEMPORAL REASONING RULES:
         });
       }
       return synthesizeVerityFactCheck({
-        claim,
+        claim: effectiveClaim,
         page,
         reason: apiError.message,
         warning: `Google Gemini API notice: ${apiError.message}. Fallback report evaluated via offline knowledge archives.`,
@@ -1110,7 +1263,7 @@ TEMPORAL REASONING RULES:
 
   // If no API key configured, use FACTSIFT AI dynamic verification
   return synthesizeVerityFactCheck({
-    claim,
+    claim: effectiveClaim,
     page,
     reason: "No API Key configured on server.",
     warning: "Running in FACTSIFT AI Offline Knowledge mode. Add your Gemini API key in Settings (⚙) for real-time live web verification.",
@@ -1407,7 +1560,7 @@ app.post("/api/check", checkLimiter, async (req, res, next) => {
 
     const result = await Promise.race([verificationPromise, timeoutPromise]);
 
-    const primaryClaimText = cleanClaim || (page ? page.title : "Image-based statement");
+    const primaryClaimText = cleanClaim || result.claim || (page ? page.title : "Image-based statement");
 
     res.json({
       claim: primaryClaimText,

@@ -66,6 +66,7 @@ const dom = {
   settingApiKey: $("settingApiKey"),
   toggleApiKeyVisibility: $("toggleApiKeyVisibility"),
   apiKeyStatusTag: $("apiKeyStatusTag"),
+  apiKeyHint: $("apiKeyHint"),
   settingModel: $("settingModel"),
   settingBaseUrl: $("settingBaseUrl"),
   segmentButtons: document.querySelectorAll(".segment-btn"),
@@ -156,10 +157,19 @@ async function initEngineSettings() {
       if (!appState.settings.apiKey && data.hasApiKey) {
         dom.apiKeyStatusTag.textContent = "Server Key Active";
         dom.settingApiKey.placeholder = data.maskedApiKey || "Server API Key Configured";
+        if (dom.apiKeyHint) {
+          dom.apiKeyHint.textContent = "Server key is active. You can optionally use your own Gemini API key.";
+        }
       } else if (appState.settings.apiKey) {
         dom.apiKeyStatusTag.textContent = "Custom Key Set";
+        if (dom.apiKeyHint) {
+          dom.apiKeyHint.textContent = "Custom API key is currently active and overrides the server key.";
+        }
       } else {
         dom.apiKeyStatusTag.textContent = "No Key Set";
+        if (dom.apiKeyHint) {
+          dom.apiKeyHint.textContent = "Enter your Google Gemini API key to enable verification.";
+        }
       }
       if (data.model && !localStorage.getItem("factsift_model") && !localStorage.getItem("truthlens_model") && !localStorage.getItem("verity_model")) {
         dom.settingModel.value = data.model;
@@ -183,6 +193,11 @@ function openSettingsModal() {
   });
   dom.testConnectionStatus.hidden = true;
   dom.testConnectionStatus.style.display = "none";
+
+  const advDetails = $("advancedSettingsDetails");
+  if (advDetails) {
+    advDetails.removeAttribute("open");
+  }
 
   dom.settingsModal.removeAttribute("hidden");
   dom.settingsModal.classList.add("active");
@@ -823,14 +838,15 @@ function renderLayoutCard(data, layout) {
     secondaryPill = `<span class="verdict-pill false">False Context</span>`;
   }
 
+  // Sources Cards
+  const sources = Array.isArray(data.sources) ? data.sources : [];
+  const hasLiveSources = sources.length > 0;
+
   // Verification mode badge (Live Web vs Knowledge Fallback)
-  const isFallback = data.verificationMode === "knowledge_fallback" || (data.engine && data.engine.includes("Fallback"));
+  const isFallback = data.verificationMode === "knowledge_fallback" || (data.engine && data.engine.includes("Fallback")) || !hasLiveSources;
   const modeBadge = isFallback
     ? `<span class="verdict-pill fallback-mode-pill" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.35); font-weight: 600;">⚡ Knowledge Fallback (Live AI Paused)</span>`
     : `<span class="verdict-pill live-mode-pill" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.35); font-weight: 600;">🌐 Live Web Grounded</span>`;
-
-  // Sources Cards
-  const sources = Array.isArray(data.sources) ? data.sources : [];
   const sourcesHtml = sources.length ? sources.map((s) => {
     const rawUrl = s.url && typeof s.url === "string" ? s.url.trim() : "";
     const isSafeUrl = /^https?:\/\//i.test(rawUrl);
@@ -945,7 +961,7 @@ dom.exportOptions.forEach((btn) => {
 dom.copyResultBtn.addEventListener("click", async () => {
   if (!appState.currentResult) return;
   const d = appState.currentResult;
-  const modeText = d.verificationMode === "knowledge_fallback" ? "Offline Knowledge Fallback" : "Live Web Grounded";
+  const modeText = (d.verificationMode === "knowledge_fallback" || (d.sources?.length || 0) === 0) ? "Offline Knowledge Fallback" : "Live Web Grounded";
   const textSummary = `[FACTSIFT FACT CHECK]\nClaim: ${d.claim}\nVerdict: ${d.verdict} (${d.confidence}% Confidence)\nMode: ${modeText}\nEngine: ${d.engine || "FACTSIFT AI"}\n\nAnalysis:\n${d.explanation}\n\nEvidence:\n${d.evidence}\n\nGenerated with FACTSIFT AI.`;
 
   try {
