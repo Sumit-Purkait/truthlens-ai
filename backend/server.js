@@ -158,8 +158,13 @@ async function callGeminiWithFallback({ apiKey, primaryModel, systemPrompt, user
   const MAX_RETRIES = 1;
   let retriesUsed = 0;
   let lastError = null;
+  const totalStart = Date.now();
 
   for (const currentModel of modelsToTry) {
+    if (Date.now() - totalStart > 20_000) {
+      console.warn(`[Gemini Fallback] Elapsed time exceeded 20s, stopping further model retries.`);
+      break;
+    }
     while (true) {
       try {
         const result = await callGeminiGenerateContent({
@@ -585,19 +590,20 @@ function classifyDomain(domain) {
   return { domain: d, publisher: capitalized, type: 'Verified Web Resource', isPrimary: false };
 }
 
+const STOP_WORDS = new Set([
+  "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+  "in", "on", "at", "to", "for", "with", "by", "about", "against", "between",
+  "into", "through", "during", "before", "after", "above", "below", "from",
+  "up", "down", "out", "off", "over", "under", "again", "further",
+  "then", "once", "here", "there", "when", "where", "why", "how", "all",
+  "any", "both", "each", "few", "more", "most", "other", "some", "such",
+  "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
+  "can", "will", "just", "should", "now", "says", "said", "claim", "claims",
+  "that", "this", "these", "those", "what", "which", "who", "whom", "whose",
+  "and", "but", "if", "or", "because", "as", "until", "while", "of"
+]);
+
 function getClaimTokens(text) {
-  const STOP_WORDS = new Set([
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "in", "on", "at", "to", "for", "with", "by", "about", "against", "between",
-    "into", "through", "during", "before", "after", "above", "below", "from",
-    "up", "down", "out", "off", "over", "under", "again", "further",
-    "then", "once", "here", "there", "when", "where", "why", "how", "all",
-    "any", "both", "each", "few", "more", "most", "other", "some", "such",
-    "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
-    "can", "will", "just", "should", "now", "says", "said", "claim", "claims",
-    "that", "this", "these", "those", "what", "which", "who", "whom", "whose",
-    "and", "but", "if", "or", "because", "as", "until", "while", "of"
-  ]);
   const baseTokens = (text || "")
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, " ")
@@ -619,6 +625,38 @@ function getClaimTokens(text) {
     tokenSet.add("webb");
   }
   return Array.from(tokenSet);
+}
+
+function extractCoreSearchQuery(text) {
+  if (!text || typeof text !== "string") return "";
+  const rawWords = text.trim().split(/\s+/).filter(Boolean);
+  if (rawWords.length <= 4) return text.trim();
+
+  const entityWords = [];
+  const nonStopWords = [];
+
+  for (const raw of rawWords) {
+    const clean = raw.replace(/[^\w]/g, "");
+    if (!clean || clean.length < 2) continue;
+    const lower = clean.toLowerCase();
+    if (STOP_WORDS.has(lower)) continue;
+
+    const isCapitalized = /^[A-Z0-9]/.test(raw) || /^[A-Z]{2,}$/.test(clean);
+    if (isCapitalized) {
+      entityWords.push(clean);
+    }
+    nonStopWords.push(clean);
+  }
+
+  if (entityWords.length >= 3) {
+    return entityWords.slice(0, 6).join(" ");
+  }
+
+  if (nonStopWords.length >= 2) {
+    return nonStopWords.slice(0, 5).join(" ");
+  }
+
+  return rawWords.slice(0, 5).join(" ");
 }
 
 function scoreCandidateRelevance(candidate, tokens, claimText) {
@@ -774,33 +812,66 @@ async function searchDuckDuckGo(query) {
       clearTimeout(timer);
     }
   }
+
+  // Cloud-safe fallback: If HTML endpoints fail or return empty (e.g. datacenter IP challenge),
+  // query DuckDuckGo's public Instant Answer REST API
+  try {
+    const apiUrl = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      const apiRes = await fetch(apiUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'FACTSIFT-AI-FactChecker/2.0' }
+      });
+      if (apiRes.ok) {
+        const d = await apiRes.json();
+        const apiResults = [];
+        if (d.AbstractURL && d.AbstractText) {
+          try {
+            const parsed = new URL(d.AbstractURL);
+            apiResults.push({
+              title: d.Heading ? `${d.Heading} - ${d.AbstractSource || 'Reference'}` : 'Reference',
+              url: cleanSourceUrl(d.AbstractURL),
+              domain: parsed.hostname.replace(/^www\./, '').toLowerCase(),
+              snippet: d.AbstractText
+            });
+          } catch {}
+        }
+        if (apiResults.length > 0) return apiResults;
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {}
+
   return [];
 }
 
 async function searchWikipedia(query) {
+  const cleanQ = (query || "").trim();
+  if (!cleanQ) return [];
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const url = 'https://en.wikipedia.org/w/api.php?action=opensearch&search=' + encodeURIComponent(query) + '&limit=4&namespace=0&format=json';
+    // Wikipedia Full-Text Search API: searches article content and titles reliably on all networks
+    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQ)}&utf8=&format=json&srlimit=5`;
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'User-Agent': 'FACTSIFT-AI-FactChecker/2.0' }
     });
     if (!res.ok) return [];
     const data = await res.json();
-    const titles = data[1] || [];
-    const snippets = data[2] || [];
-    const links = data[3] || [];
     const results = [];
-    for (let i = 0; i < titles.length; i++) {
-      if (links[i] && titles[i]) {
-        results.push({
-          title: `${titles[i]} - Wikipedia`,
-          url: cleanSourceUrl(links[i]),
-          domain: 'en.wikipedia.org',
-          snippet: snippets[i] || `Reference article on ${titles[i]}`
-        });
-      }
+    for (const s of (data.query?.search || [])) {
+      if (!s.title) continue;
+      const cleanTitle = s.title;
+      results.push({
+        title: `${cleanTitle} - Wikipedia`,
+        url: cleanSourceUrl(`https://en.wikipedia.org/wiki/${encodeURIComponent(cleanTitle.replace(/ /g, '_'))}`),
+        domain: 'en.wikipedia.org',
+        snippet: (s.snippet || '').replace(/<[^>]+>/g, '').trim() || `Reference article on ${cleanTitle}`
+      });
     }
     return results;
   } catch {
@@ -811,31 +882,7 @@ async function searchWikipedia(query) {
 }
 
 async function searchWikipediaText(query) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
-  try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&srlimit=4`;
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'FACTSIFT-AI-FactChecker/2.0' }
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const results = [];
-    for (const s of (data.query?.search || [])) {
-      results.push({
-        title: `${s.title} - Wikipedia`,
-        url: cleanSourceUrl(`https://en.wikipedia.org/wiki/${encodeURIComponent(s.title.replace(/ /g, '_'))}`),
-        domain: 'en.wikipedia.org',
-        snippet: s.snippet.replace(/<[^>]+>/g, '')
-      });
-    }
-    return results;
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
+  return searchWikipedia(query);
 }
 
 async function fetchAuthoritativeSources(claim, page, customQueries = []) {
@@ -848,10 +895,22 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
     .replace(/\bcm\b/gi, 'Chief Minister');
   const words = expandedClaim.split(/\s+/).filter(Boolean);
   const coreQuery = words.slice(0, 14).join(' ');
+  const conciseQuery = extractCoreSearchQuery(expandedClaim);
 
   const searchPromises = [];
   if (coreQuery) {
     searchPromises.push(searchDuckDuckGo(coreQuery));
+  }
+  if (conciseQuery && conciseQuery.toLowerCase() !== coreQuery.toLowerCase()) {
+    searchPromises.push(searchDuckDuckGo(conciseQuery));
+  }
+
+  // Cloud-safe Wikipedia full-text search with concise entity/topic query
+  if (conciseQuery) {
+    searchPromises.push(searchWikipedia(conciseQuery));
+  }
+  if (coreQuery && coreQuery.toLowerCase() !== conciseQuery.toLowerCase()) {
+    searchPromises.push(searchWikipedia(coreQuery));
   }
 
   // Execute custom queries provided (e.g. from image OCR / claim extraction)
@@ -860,6 +919,10 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
       const cleanQ = (q || '').trim();
       if (cleanQ && cleanQ.length > 3 && cleanQ.toLowerCase() !== coreQuery.toLowerCase()) {
         searchPromises.push(searchDuckDuckGo(cleanQ));
+        const customConcise = extractCoreSearchQuery(cleanQ);
+        if (customConcise && customConcise.toLowerCase() !== conciseQuery.toLowerCase()) {
+          searchPromises.push(searchWikipedia(customConcise));
+        }
       }
     }
   }
@@ -888,16 +951,15 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} official announcement`));
     searchPromises.push(searchDuckDuckGo(`${coreQuery} ${currentYear}`));
     searchPromises.push(searchDuckDuckGo(`${coreQuery} confirmed`));
+    if (conciseQuery) {
+      searchPromises.push(searchDuckDuckGo(`${conciseQuery} official`));
+      searchPromises.push(searchWikipedia(conciseQuery));
+    }
   }
 
   // Generic announcement/statement expansion
   if (coreQuery && /(?:statement|announc|official|confirm|held in|moved to|postpon|cancel|reschedul)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} official statement`));
-  }
-
-  // Include encyclopedic reference for historical / definition context
-  if (words.length >= 2) {
-    searchPromises.push(searchWikipedia(words.slice(0, 5).join(' ')));
   }
 
   const results = await Promise.all(searchPromises);
@@ -1191,16 +1253,16 @@ CORE VERIFICATION RULES:
         }
       }
 
-      // Calibrate confidence for image claims: do not give 100% unless definitive primary source is present
-      if (image && parsed.confidence === 100) {
+      // Requirement 7 & 8: Check whether genuine live web sources were retrieved
+      const hasLiveSources = finalSources.length > 0;
+
+      // Calibrate confidence for image claims: only calibrate when genuine live sources are present but non-primary
+      if (image && parsed.confidence === 100 && hasLiveSources) {
         const hasAuthoritativeSource = finalSources.some(s => s.type === "Official Government Source" || s.type === "Primary Source" || s.isPrimary);
         if (!hasAuthoritativeSource) {
           parsed.confidence = 90;
         }
       }
-
-      // Requirement 7 & 8: Check whether genuine live web sources were retrieved
-      const hasLiveSources = finalSources.length > 0;
 
       if (!hasLiveSources) {
         if (parsed.evidence && /corroborated by live web|verified via live search|live web search confirmed/i.test(parsed.evidence)) {
@@ -1210,6 +1272,8 @@ CORE VERIFICATION RULES:
           claim: effectiveClaim,
           analysis: analysisText,
           ...parsed,
+          verdict: (parsed.verdict === "FALSE" && !hasLiveSources) ? "UNCERTAIN" : parsed.verdict,
+          confidence: Math.min(parsed.confidence, 50),
           sources: [],
           engine: "Google Gemini Engine • Model Knowledge (Live Sources Unavailable)",
           modelUsed: geminiResult.modelUsed || activeModel,
@@ -1554,11 +1618,21 @@ app.post("/api/check", checkLimiter, async (req, res, next) => {
       userBaseUrl
     });
 
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(Object.assign(new Error("Verification request timed out after 35s. Please try again."), { status: 504 })), 35_000);
-    });
-
-    const result = await Promise.race([verificationPromise, timeoutPromise]);
+    let result;
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(Object.assign(new Error("Verification request timed out after 35s. Please try again."), { status: 504 })), 35_000);
+      });
+      result = await Promise.race([verificationPromise, timeoutPromise]);
+    } catch (raceErr) {
+      console.warn("[Verification Timeout/Error]", raceErr.message);
+      result = synthesizeVerityFactCheck({
+        claim: cleanClaim,
+        page,
+        reason: raceErr.message,
+        warning: "Live verification took too long to complete. Live AI verification is temporarily unavailable. Please retry shortly."
+      });
+    }
 
     const primaryClaimText = cleanClaim || result.claim || (page ? page.title : "Image-based statement");
 
