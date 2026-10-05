@@ -26,7 +26,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // Google Gemini API Configuration & Endpoints
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_TIMEOUT_MS = 15_000;
-const FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.7-flash", "gemini-3-flash-preview"];
+const FALLBACK_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.7-flash", "gemini-3-flash-preview"];
 
 function isGeminiKey(key) {
   if (!key || typeof key !== "string") return false;
@@ -1097,7 +1097,7 @@ SEARCH_QUERIES: [query 1 | query 2 | query 3]`;
       userPrompt: prompt,
       image,
       baseUrl,
-      timeoutMs: 12_000
+      timeoutMs: 16_000
     });
 
     const text = result.text || "";
