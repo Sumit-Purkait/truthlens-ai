@@ -885,6 +885,72 @@ async function searchWikipediaText(query) {
   return searchWikipedia(query);
 }
 
+async function searchGoogleNews(query) {
+  const cleanQ = (query || "").trim();
+  if (!cleanQ) return [];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanQ)}&hl=en-US&gl=US&ceid=US:en`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+      }
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const $ = load(xml, { xmlMode: true });
+    const results = [];
+    $('item').each((i, elem) => {
+      if (results.length >= 6) return false;
+      const item = $(elem);
+      const rawTitle = item.find('title').text().trim();
+      const link = item.find('link').text().trim();
+      const sourceEl = item.find('source');
+      const sourceName = sourceEl.text().trim();
+      const sourceUrl = sourceEl.attr('url') || '';
+      const pubDate = item.find('pubDate').text().trim();
+      const desc = item.find('description').text().replace(/<[^>]+>/g, '').trim();
+
+      if (!rawTitle || !link) return;
+
+      let domain = '';
+      if (sourceUrl) {
+        try {
+          domain = new URL(sourceUrl).hostname.replace(/^www\./, '').toLowerCase();
+        } catch {}
+      }
+      if (!domain && link) {
+        try {
+          domain = new URL(link).hostname.replace(/^www\./, '').toLowerCase();
+        } catch {}
+      }
+
+      let cleanTitle = rawTitle;
+      if (sourceName && cleanTitle.endsWith(` - ${sourceName}`)) {
+        cleanTitle = cleanTitle.slice(0, -(sourceName.length + 3)).trim();
+      }
+
+      const snippet = desc && desc !== rawTitle
+        ? desc
+        : (pubDate ? `${cleanTitle} (Reported: ${pubDate})` : cleanTitle);
+
+      results.push({
+        title: cleanTitle,
+        url: cleanSourceUrl(link),
+        domain: domain || 'news.google.com',
+        snippet
+      });
+    });
+    return results;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchAuthoritativeSources(claim, page, customQueries = []) {
   const cleanClaim = (claim || (page ? page.title : "")).trim();
   if (!cleanClaim && (!customQueries || customQueries.length === 0)) return [];
@@ -913,6 +979,14 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
     searchPromises.push(searchWikipedia(coreQuery));
   }
 
+  // Cloud-safe Google News RSS search (public, reliable on all datacenter/serverless IPs)
+  if (conciseQuery) {
+    searchPromises.push(searchGoogleNews(conciseQuery));
+  }
+  if (coreQuery && coreQuery.toLowerCase() !== conciseQuery.toLowerCase()) {
+    searchPromises.push(searchGoogleNews(coreQuery));
+  }
+
   // Execute custom queries provided (e.g. from image OCR / claim extraction)
   if (Array.isArray(customQueries) && customQueries.length > 0) {
     for (const q of customQueries.slice(0, 4)) {
@@ -922,6 +996,7 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
         const customConcise = extractCoreSearchQuery(cleanQ);
         if (customConcise && customConcise.toLowerCase() !== conciseQuery.toLowerCase()) {
           searchPromises.push(searchWikipedia(customConcise));
+          searchPromises.push(searchGoogleNews(customConcise));
         }
       }
     }
@@ -938,15 +1013,20 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} ${currentYear}`));
     searchPromises.push(searchWikipedia(target));
     searchPromises.push(searchWikipediaText(`current ${target} ${currentYear}`));
+    searchPromises.push(searchGoogleNews(`current ${target} ${currentYear}`));
   } else if (/(?:nasa|space|jwst|telescope|planet|exoplanet|trappist|mars|moon|galaxy|astronomy)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} NASA official`));
     const scienceMatch = expandedClaim.match(/(?:trappist-[0-9a-z]+|jwst|james webb|mars|moon|voyager)/i);
     if (scienceMatch) {
       searchPromises.push(searchWikipedia(scienceMatch[0]));
       searchPromises.push(searchWikipediaText(`${scienceMatch[0]} atmosphere discovery`));
+      searchPromises.push(searchGoogleNews(`${scienceMatch[0]} discovery`));
+    } else {
+      searchPromises.push(searchGoogleNews(`${conciseQuery || coreQuery} NASA`));
     }
   } else if (/(?:who|cdc|disease|vaccine|virus|health|fda|medical)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} WHO CDC official health`));
+    searchPromises.push(searchGoogleNews(`${conciseQuery || coreQuery} health`));
   } else if (/(?:fia|f1|formula\s*1|grand\s*prix|fifa|olympic|world\s*cup|tournament|championship|reschedul|relocat|venue|calendar|schedule)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} official announcement`));
     searchPromises.push(searchDuckDuckGo(`${coreQuery} ${currentYear}`));
@@ -954,12 +1034,14 @@ async function fetchAuthoritativeSources(claim, page, customQueries = []) {
     if (conciseQuery) {
       searchPromises.push(searchDuckDuckGo(`${conciseQuery} official`));
       searchPromises.push(searchWikipedia(conciseQuery));
+      searchPromises.push(searchGoogleNews(conciseQuery));
     }
   }
 
   // Generic announcement/statement expansion
   if (coreQuery && /(?:statement|announc|official|confirm|held in|moved to|postpon|cancel|reschedul)/i.test(expandedClaim)) {
     searchPromises.push(searchDuckDuckGo(`${coreQuery} official statement`));
+    searchPromises.push(searchGoogleNews(`${coreQuery} statement`));
   }
 
   const results = await Promise.all(searchPromises);
