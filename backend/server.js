@@ -1020,7 +1020,7 @@ async function performVerification({ claim, cleanUrl, page, image, userKey, user
       claim: effectiveClaim,
       page,
       reason: "Google Gemini API quota balance is exhausted (429).",
-      warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
+      warning: "Live AI verification is temporarily unavailable due to upstream API rate limits (429). Please retry shortly or configure your Gemini API key in Settings (⚙).",
       candidates
     });
   }
@@ -1238,7 +1238,7 @@ CORE VERIFICATION RULES:
           claim: effectiveClaim,
           page,
           reason: "Google Gemini API quota balance is exhausted (429).",
-          warning: "Live AI verification is temporarily unavailable due to API rate limits (429). FACTSIFT AI evaluated this statement using offline knowledge archives. Live verification will resume shortly.",
+          warning: "Live AI verification is temporarily unavailable due to upstream API rate limits (429). Please retry shortly or configure your Gemini API key in Settings (⚙).",
           candidates
         });
       }
@@ -1255,7 +1255,7 @@ CORE VERIFICATION RULES:
         claim: effectiveClaim,
         page,
         reason: apiError.message,
-        warning: `Google Gemini API notice: ${apiError.message}. Fallback report evaluated via offline knowledge archives.`,
+        warning: `Google Gemini API notice: ${apiError.message}. Live verification is temporarily unavailable. Please retry shortly.`,
         candidates
       });
     }
@@ -1266,7 +1266,7 @@ CORE VERIFICATION RULES:
     claim: effectiveClaim,
     page,
     reason: "No API Key configured on server.",
-    warning: "Running in FACTSIFT AI Offline Knowledge mode. Add your Gemini API key in Settings (⚙) for real-time live web verification.",
+    warning: "No active Gemini API key configured on server. Add your Gemini API key in Settings (⚙) for real-time live web verification.",
     candidates
   });
 }
@@ -1274,7 +1274,7 @@ CORE VERIFICATION RULES:
 // Built-in FACTSIFT AI fact verification synthesis for high availability & stability
 function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = [] }) {
   let verdict = "UNCERTAIN";
-  let confidence = 70;
+  let confidence = 50;
   let explanation = "";
   let evidence = "";
   let sources = [];
@@ -1282,9 +1282,9 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
 
   if (page) {
     verdict = "UNCERTAIN";
-    confidence = 65;
-    explanation = `[Knowledge Fallback — Live AI Verification Temporarily Unavailable]: FACTSIFT AI reviewed the content extracted from ${page.domain}. The article discusses '${page.title}'. Statements in online articles are evaluated alongside independent background references.`;
-    evidence = `Reachable webpage at ${page.domain}. Extracted ${page.text.length} characters of readable context.`;
+    confidence = 50;
+    explanation = "Live AI verification is temporarily unavailable due to an upstream Gemini API rate limit or service issue. FACTSIFT could not verify this webpage at this time. Please retry shortly.";
+    evidence = `Reachable webpage at ${page.domain}. Extracted ${page.text.length} characters of readable context. Automated verification was paused because the AI provider was unavailable. No factual judgment was rendered.`;
     const pageDomain = (page.domain || "").toLowerCase().replace(/^www\./, "");
     seenDomains.add(pageDomain);
     sources.push({
@@ -1316,12 +1316,12 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
   }
 
   if (!explanation) {
-    explanation = `[Knowledge Fallback — Live AI Verification Temporarily Unavailable]: The statement "${claim}" was evaluated using offline knowledge archives. Live web verification could not be completed at this time due to temporary API rate limits or connection constraints.`;
+    explanation = "Live AI verification is temporarily unavailable due to an upstream Gemini API rate limit or service issue. FACTSIFT could not verify this claim at this time. Please retry shortly.";
   }
   if (!evidence) {
     evidence = sources.length > 0
-      ? `Referenced from ${sources.length} offline knowledge records. Live web AI verification is temporarily paused.`
-      : "No conclusive consensus found in offline records. Live verification will resume shortly.";
+      ? `Automated verification was paused because the AI provider was unavailable. Referenced ${sources.length} background web sources, but no factual judgment was rendered.`
+      : "Automated verification was paused because the AI provider was unavailable. No factual judgment was rendered.";
   }
 
   sources = sources.slice(0, 5);
@@ -1332,9 +1332,9 @@ function synthesizeVerityFactCheck({ claim, page, reason, warning, candidates = 
     explanation,
     evidence,
     sources,
-    engine: "FACTSIFT AI Offline Knowledge Base (Fallback Analysis)",
+    engine: "FACTSIFT AI Fallback Engine (Service Temporarily Unavailable)",
     verificationMode: "knowledge_fallback",
-    warning: warning || "Live verification is temporarily unavailable. Displaying offline knowledge analysis."
+    warning: warning || "Live AI verification is temporarily unavailable due to an upstream Gemini API rate limit or service issue. Please retry shortly."
   };
 }
 

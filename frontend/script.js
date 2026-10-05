@@ -919,7 +919,7 @@ function renderLayoutCard(data, layout) {
             <span class="section-label">${isFallback ? "BACKGROUND REFERENCES" : "REFERENCED SOURCES"}</span>
             <span class="sources-count-badge">${sources.length}</span>
           </div>
-          <span class="field-hint">${isFallback ? "Offline knowledge records" : "Live web grounded verification"}</span>
+          <span class="field-hint">${isFallback ? "No live sources available" : "Live web grounded verification"}</span>
         </div>
         <div class="sources-grid">
           ${sourcesHtml}
