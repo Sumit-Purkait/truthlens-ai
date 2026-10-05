@@ -1211,7 +1211,7 @@ CORE VERIFICATION RULES:
           analysis: analysisText,
           ...parsed,
           sources: [],
-          engine: "Google Gemini Engine • Offline Model Knowledge (Live Sources Unavailable)",
+          engine: "Google Gemini Engine • Model Knowledge (Live Sources Unavailable)",
           modelUsed: geminiResult.modelUsed || activeModel,
           verificationMode: "knowledge_fallback",
           warning: "Live web verification was unavailable or insufficient: no live web sources could be retrieved for this claim. This assessment relies on pre-trained model knowledge and may not reflect recent or rescheduled events."

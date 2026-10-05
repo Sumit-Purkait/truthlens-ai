@@ -961,7 +961,7 @@ dom.exportOptions.forEach((btn) => {
 dom.copyResultBtn.addEventListener("click", async () => {
   if (!appState.currentResult) return;
   const d = appState.currentResult;
-  const modeText = (d.verificationMode === "knowledge_fallback" || (d.sources?.length || 0) === 0) ? "Offline Knowledge Fallback" : "Live Web Grounded";
+  const modeText = (d.verificationMode === "knowledge_fallback" || (d.sources?.length || 0) === 0) ? "Knowledge Fallback" : "Live Web Grounded";
   const textSummary = `[FACTSIFT FACT CHECK]\nClaim: ${d.claim}\nVerdict: ${d.verdict} (${d.confidence}% Confidence)\nMode: ${modeText}\nEngine: ${d.engine || "FACTSIFT AI"}\n\nAnalysis:\n${d.explanation}\n\nEvidence:\n${d.evidence}\n\nGenerated with FACTSIFT AI.`;
 
   try {
