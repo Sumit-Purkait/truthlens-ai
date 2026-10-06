@@ -1224,6 +1224,10 @@ COMPOUND & MIXED CLAIM RULES:
   * If the underlying event is confirmed but the specific asserted cause/mechanism is false, unsupported, exaggerated, or materially different from what sources report, assign MISLEADING rather than TRUE.
   * Distinguish temporal sequence from causation. A source saying event B happened "after" event A does not by itself prove that A caused B.
   * For causal claims, require evidence supporting the actual causal mechanism stated in the claim, not merely evidence that related events occurred near each other in time.
+- MATERIALLY MISLEADING COMPOUND CLAIMS:
+  * When a compound claim contains a confirmed real event or action, but also contains a material unconfirmed, unsupported, exaggerated, or contradicted causal explanation/mechanism that substantially changes the impression of what happened, prefer MISLEADING over UNCERTAIN when the available evidence is sufficient to establish that the event occurred but does not support the asserted explanation.
+  * Do not use UNCERTAIN merely because one component is unconfirmed if the combination itself creates a materially misleading impression. Clearly separate confirmed facts from the unsupported or unconfirmed component in the explanation.
+  * For example, if quarantine/medical observation is confirmed but a claimed laboratory leak is not confirmed, do not treat the entire claim as simply UNCERTAIN. If the unsupported lab-leak explanation materially changes the meaning of the claim, classify the overall claim as MISLEADING.
 - In EXPLANATION:
   * Clearly state which important components are confirmed.
   * Clearly state which are contradicted, exaggerated, or unverified.
