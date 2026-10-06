@@ -1203,10 +1203,35 @@ LIVE EVIDENCE & TEMPORAL REASONING PRINCIPLES:
   * Official government websites (.gov, official portals)
   * Official organizations and governing bodies (e.g. sports federations like FIA/Formula 1, FIFA, IOC; science bodies like NASA, ESA; international bodies like UN, WHO, WTO)
   * Verified official statements, press releases, and reputable news wires
-- If multiple credible sources conflict or report contradictory facts, explicitly describe the conflict in EXPLANATION instead of guessing, and assign MISLEADING or UNCERTAIN.
-- Calibrate confidence carefully:
-  * Do NOT automatically assign 100% confidence to image-based claims or time-sensitive claims unless authoritative primary sources conclusively and unequivocally confirm the exact statement.
-  * If evidence is partial, indirect, or based on secondary reports without official confirmation, calibrate confidence appropriately (e.g. 70-85%).
+- Give greater weight to primary authorities and reputable news reporting. Do not ignore a source merely because another component of the claim is unsupported.
+
+VERDICT STANDARDS & OPERATIONAL DEFINITIONS:
+- TRUE: All core substantive factual assertions are supported by reliable evidence.
+- FALSE: The primary/core claim is directly contradicted by reliable evidence, or the central factual premise is demonstrably false.
+- MISLEADING: The claim combines genuine facts with false, exaggerated, unsupported, or out-of-context claims, OR connects a real event to an unsupported cause. Use MISLEADING when the overall statement creates a materially false impression even though some individual parts are true.
+- UNCERTAIN: Reliable evidence is genuinely insufficient, conflicting, or inconclusive to determine whether the core claim is true or false. Do NOT use UNCERTAIN merely because one part of a compound claim is unsupported when other parts are clearly confirmed and the combination creates a misleading impression.
+
+COMPOUND & MIXED CLAIM RULES:
+- Before assigning the overall verdict, internally identify the distinct factual components of the claim (e.g., event/action, quantity or scope, location, stated cause, consequence, timing).
+- Evaluate each component against the available live evidence.
+- For causal claims, verify the cause separately from the event. A real event does NOT automatically prove the claimed cause.
+- For mixed claims: If meaningful parts are confirmed but another important part is false, unsupported, exaggerated, or creates false context, prefer MISLEADING over UNCERTAIN when the available evidence supports that conclusion.
+- CAUSAL & MECHANISM SPECIFICITY:
+  * When a claim connects an event to a specific cause, trigger, or mechanism using words such as "after", "because", "due to", "following", "caused by", or "as a result of", verify BOTH the event AND the specific asserted cause/mechanism separately.
+  * Do NOT assign TRUE merely because the underlying event is real.
+  * The exact asserted cause, mechanism, pathogen/agent, and causal relationship must be supported by reliable evidence when they materially affect the meaning of the claim.
+  * Never substitute a related event for the specific asserted cause (for example, evidence that a laboratory worker became ill or died does NOT prove that a deadly virus leaked from a laboratory; evidence of a routine power trip does not prove a cyberattack).
+  * If the underlying event is confirmed but the specific asserted cause/mechanism is false, unsupported, exaggerated, or materially different from what sources report, assign MISLEADING rather than TRUE.
+  * Distinguish temporal sequence from causation. A source saying event B happened "after" event A does not by itself prove that A caused B.
+  * For causal claims, require evidence supporting the actual causal mechanism stated in the claim, not merely evidence that related events occurred near each other in time.
+- In EXPLANATION:
+  * Clearly state which important components are confirmed.
+  * Clearly state which are contradicted, exaggerated, or unverified.
+  * Do NOT make blanket statements that dismiss the entire claim when reliable evidence confirms part of it.
+  * Do NOT claim that something did not happen merely because no source was found; distinguish "not confirmed" from "confirmed false".
+- Confidence calibration:
+  * Confidence should reflect the evidence for the OVERALL verdict.
+  * Do not assign very high confidence when important components remain genuinely unresolved.
   * If reliable live sources are absent or inconclusive, assign UNCERTAIN with lower confidence.
 
 Analyse the submitted claim, context, and/or webpage using verified empirical facts, current temporal context, and the LIVE WEB SEARCH FINDINGS below.
@@ -1221,14 +1246,14 @@ LIVE WEB SEARCH FINDINGS:
 ${searchContext || "No live external search results available."}
 
 INSTRUCTIONS:
-1. Determine the VERDICT: TRUE, FALSE, MISLEADING, or UNCERTAIN.
-2. Provide CONFIDENCE: 0-100%.
-   - Do not return 100% confidence for unconfirmed or ambiguous claims without definitive primary source proof.
+1. Determine the VERDICT: TRUE, FALSE, MISLEADING, or UNCERTAIN based strictly on the VERDICT STANDARDS above.
+2. Provide CONFIDENCE: 0-100%. Reflect evidence strength for the overall verdict; do not use very high confidence when important components remain genuinely unresolved.
 3. In EXPLANATION: A concise, highly balanced analytical breakdown explaining why the claim is true, false, misleading, or unproven relative to today's date (${currentDateStr}).
+   - For compound claims, clearly distinguish what is confirmed from what is exaggerated, unverified, or contradicted.
    - For political or government-related claims, remain strictly factual, neutral, and impartial. Do not introduce political opinions. Do not rank politicians, parties, candidates, or political choices.
    - When official sources, governing bodies, or reputable news document an exceptional event, relocation, or change, rely strictly on verified current facts.
    - If pre-trained knowledge contradicts recent live web findings, ALWAYS prioritize the up-to-date live search findings.
-4. In EVIDENCE: The concrete facts, dates, timelines, and official statements that prove or disprove the statement.
+4. In EVIDENCE: The concrete facts, dates, timelines, and official statements that prove, disprove, or qualify the statement and its components.
 5. In SELECTED_SOURCES: Select up to 5 source numbers (e.g. 1, 3) from the LIVE WEB SEARCH FINDINGS above that directly support, contradict, or provide necessary context for the claim.
    - Prioritize directly relevant OFFICIAL GOVERNMENT SOURCES and PRIMARY SOURCES.
    - Use REPUTABLE NEWS SOURCES and PUBLIC REFERENCES when helpful for secondary context.
@@ -1252,8 +1277,9 @@ CORE VERIFICATION RULES:
 2. Prioritize fresh, verified live web evidence over older pre-trained model knowledge.
 3. Do NOT reject claims simply because they conflict with historical norms or general knowledge (e.g. rescheduled, relocated, or exceptional events).
 4. Prefer authoritative primary sources (official government portals, official organizations like FIA/Formula 1, FIFA, IOC, NASA/ESA, WHO).
-5. If live search results conflict or if reliable current evidence is missing, do not guess with high confidence; explain the uncertainty.
-6. Calibrate confidence carefully: do not assign 100% confidence to image claims unless definitive primary sources prove it.`;
+5. For compound or mixed claims, evaluate distinct components; assign MISLEADING when genuine facts are combined with false, exaggerated, or unverified claims.
+6. If live search results conflict or if reliable current evidence is missing, do not guess with high confidence; explain the uncertainty.
+7. Calibrate confidence carefully: do not assign 100% confidence to image claims unless definitive primary sources prove it.`;
 
       const geminiResult = await callGeminiWithFallback({
         apiKey: activeKey,
