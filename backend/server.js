@@ -1075,18 +1075,27 @@ async function extractImageClaimAndQueries({ image, userClaim, apiKey, model, ba
     return { transcription: "", claim: userClaim || "", queries: [] };
   }
 
-  const prompt = `You are an expert OCR, document inspection, and factual claim analysis system.
+  const prompt = `You are an expert OCR, document inspection, and factual claim extraction system.
 Analyze the provided image carefully.
 
 Tasks:
 1. Extract and transcribe all relevant visible text, document titles, logos, organization names, dates, locations, and statements shown in the image.
-2. Identify the core factual statement, announcement, or claim being made (especially noting specific dates, years, locations, organizers, rescheduled/relocated events, or exceptional decisions).
-3. If user added contextual text ("${userClaim || ""}"), factor it in.
-4. Generate 2 to 3 concise, highly effective live web search queries to verify whether this claim or statement is authentic, officially confirmed, reported by reputable media, or debunked. Include relevant years, locations, and official organization names.
+2. Identify and state the core factual statement, announcement, claim, or allegation asserted in the image.
+   CRITICAL RULES FOR CORE_CLAIM:
+   - Extract ONLY the substantive factual claim, statement, announcement, or allegation contained in the image.
+   - Write the claim directly and neutrally as the asserted proposition (e.g., "The FIA announced that during the Bahrain Grand Prix in Malaysia at the Sepang Circuit, low engine speed, wet-weather settings, and sector configurations caused a power loss, followed by a software update during a rain delay.").
+   - NEVER evaluate, verify, judge, or fact-check the claim during extraction. CORE_CLAIM must represent the hypothesis being tested by FACTSIFT, not the result of the test.
+   - NEVER add evaluative words, labels, conclusions, or verdict words such as: fake, satirical, parody, fabricated, hoax, misleading, false, genuine, authentic, verified, or debunked.
+   - NEVER use media or container framing such as "The image presents...", "The image shows a fake...", "This screenshot claims...", "The post appears to...", or "The document is authentic/fake...". State the asserted statement directly.
+   - Do NOT add conclusions, skepticism, credibility judgments, or fact-checking results.
+   - Preserve important factual details from the image, including: people/organizations, dates, locations, event names, numbers, technical details, stated causes/effects, and actions or announcements.
+   - If the image contains an unusual or apparently contradictory detail, DO NOT correct, reinterpret, or rationalize it. Preserve what the image asserts and let the later verification stage determine whether it is true or false.
+3. If user added contextual text ("${userClaim || ""}"), factor it in to identify the relevant statement.
+4. Generate 2 to 3 concise, highly effective live web search queries to verify whether this claim or statement is authentic, officially confirmed, reported by reputable media, or debunked. Include relevant years, locations, and official organization names. Generating search queries must NOT cause CORE_CLAIM to contain a verdict.
 
 Respond in EXACTLY this format:
 TRANSCRIPTION: [verbatim or summarized text from image]
-CORE_CLAIM: [clear 1-2 sentence statement of the factual claim made in the image]
+CORE_CLAIM: [clear, neutral 1-2 sentence statement of the factual claim made in the image]
 SEARCH_QUERIES: [query 1 | query 2 | query 3]`;
 
   try {
